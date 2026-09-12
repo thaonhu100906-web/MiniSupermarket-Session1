@@ -1,0 +1,150 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\TranThiThaoNhu_2124110075\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{0F823BD5-4BB5-4598-8D27-01DD0DEA50AF}|MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj|d:\\tranthithaonhu_2124110075\\minisupermarket.winforms\\formcategorymanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{0F823BD5-4BB5-4598-8D27-01DD0DEA50AF}|MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj|solutionrelative:minisupermarket.winforms\\formcategorymanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{0F823BD5-4BB5-4598-8D27-01DD0DEA50AF}|MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj|D:\\TranThiThaoNhu_2124110075\\minisupermarket.winforms\\formcategorymanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{0F823BD5-4BB5-4598-8D27-01DD0DEA50AF}|MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj|solutionrelative:minisupermarket.winforms\\formcategorymanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{0F823BD5-4BB5-4598-8D27-01DD0DEA50AF}|MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj|d:\\tranthithaonhu_2124110075\\minisupermarket.winforms\\formcategorymanagement.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{0F823BD5-4BB5-4598-8D27-01DD0DEA50AF}|MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj|solutionrelative:minisupermarket.winforms\\formcategorymanagement.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{0F823BD5-4BB5-4598-8D27-01DD0DEA50AF}|MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj|d:\\tranthithaonhu_2124110075\\minisupermarket.winforms\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{0F823BD5-4BB5-4598-8D27-01DD0DEA50AF}|MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj|solutionrelative:minisupermarket.winforms\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F1FBFBA5-DF60-4B65-A8F5-9046413101C2}|TranThiThaoNhu_2124110075\\TranThiThaoNhu_2124110075.API.csproj|d:\\tranthithaonhu_2124110075\\tranthithaonhu_2124110075\\controllers\\categorycontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F1FBFBA5-DF60-4B65-A8F5-9046413101C2}|TranThiThaoNhu_2124110075\\TranThiThaoNhu_2124110075.API.csproj|solutionrelative:tranthithaonhu_2124110075\\controllers\\categorycontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F1FBFBA5-DF60-4B65-A8F5-9046413101C2}|TranThiThaoNhu_2124110075\\TranThiThaoNhu_2124110075.API.csproj|d:\\tranthithaonhu_2124110075\\tranthithaonhu_2124110075\\models\\category.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F1FBFBA5-DF60-4B65-A8F5-9046413101C2}|TranThiThaoNhu_2124110075\\TranThiThaoNhu_2124110075.API.csproj|solutionrelative:tranthithaonhu_2124110075\\models\\category.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{0F823BD5-4BB5-4598-8D27-01DD0DEA50AF}|MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj|d:\\tranthithaonhu_2124110075\\minisupermarket.winforms\\minisupermarket.winforms.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{0F823BD5-4BB5-4598-8D27-01DD0DEA50AF}|MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj|solutionrelative:minisupermarket.winforms\\minisupermarket.winforms.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F1FBFBA5-DF60-4B65-A8F5-9046413101C2}|TranThiThaoNhu_2124110075\\TranThiThaoNhu_2124110075.API.csproj|d:\\tranthithaonhu_2124110075\\tranthithaonhu_2124110075\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F1FBFBA5-DF60-4B65-A8F5-9046413101C2}|TranThiThaoNhu_2124110075\\TranThiThaoNhu_2124110075.API.csproj|solutionrelative:tranthithaonhu_2124110075\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "FormCategoryManagement.Designer.cs",
+              "DocumentMoniker": "D:\\TranThiThaoNhu_2124110075\\MiniSupermarket.WinForms\\FormCategoryManagement.Designer.cs",
+              "RelativeDocumentMoniker": "MiniSupermarket.WinForms\\FormCategoryManagement.Designer.cs",
+              "ToolTip": "D:\\TranThiThaoNhu_2124110075\\MiniSupermarket.WinForms\\FormCategoryManagement.Designer.cs",
+              "RelativeToolTip": "MiniSupermarket.WinForms\\FormCategoryManagement.Designer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAGAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-12T11:39:18.711Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "FormCategoryManagement.cs",
+              "DocumentMoniker": "D:\\TranThiThaoNhu_2124110075\\MiniSupermarket.WinForms\\FormCategoryManagement.cs",
+              "RelativeDocumentMoniker": "MiniSupermarket.WinForms\\FormCategoryManagement.cs",
+              "ToolTip": "D:\\TranThiThaoNhu_2124110075\\MiniSupermarket.WinForms\\FormCategoryManagement.cs",
+              "RelativeToolTip": "MiniSupermarket.WinForms\\FormCategoryManagement.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-12T11:32:19.419Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "FormCategoryManagement.cs [Design]",
+              "DocumentMoniker": "D:\\TranThiThaoNhu_2124110075\\MiniSupermarket.WinForms\\FormCategoryManagement.cs",
+              "RelativeDocumentMoniker": "MiniSupermarket.WinForms\\FormCategoryManagement.cs",
+              "ToolTip": "D:\\TranThiThaoNhu_2124110075\\MiniSupermarket.WinForms\\FormCategoryManagement.cs [Design]",
+              "RelativeToolTip": "MiniSupermarket.WinForms\\FormCategoryManagement.cs [Design]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-12T11:25:38.674Z",
+              "EditorCaption": " [Design]"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "MiniSupermarket.WinForms.csproj",
+              "DocumentMoniker": "D:\\TranThiThaoNhu_2124110075\\MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj",
+              "RelativeDocumentMoniker": "MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj",
+              "ToolTip": "D:\\TranThiThaoNhu_2124110075\\MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj",
+              "RelativeToolTip": "MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-09-12T12:25:35.674Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "CategoryController.cs",
+              "DocumentMoniker": "D:\\TranThiThaoNhu_2124110075\\TranThiThaoNhu_2124110075\\Controllers\\CategoryController.cs",
+              "RelativeDocumentMoniker": "TranThiThaoNhu_2124110075\\Controllers\\CategoryController.cs",
+              "ToolTip": "D:\\TranThiThaoNhu_2124110075\\TranThiThaoNhu_2124110075\\Controllers\\CategoryController.cs",
+              "RelativeToolTip": "TranThiThaoNhu_2124110075\\Controllers\\CategoryController.cs",
+              "ViewState": "AgIAAEIAAAAAAAAAAAAUwGcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-12T10:27:14.556Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\TranThiThaoNhu_2124110075\\MiniSupermarket.WinForms\\Program.cs",
+              "RelativeDocumentMoniker": "MiniSupermarket.WinForms\\Program.cs",
+              "ToolTip": "D:\\TranThiThaoNhu_2124110075\\MiniSupermarket.WinForms\\Program.cs",
+              "RelativeToolTip": "MiniSupermarket.WinForms\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-12T12:18:17.163Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\TranThiThaoNhu_2124110075\\TranThiThaoNhu_2124110075\\Program.cs",
+              "RelativeDocumentMoniker": "TranThiThaoNhu_2124110075\\Program.cs",
+              "ToolTip": "D:\\TranThiThaoNhu_2124110075\\TranThiThaoNhu_2124110075\\Program.cs",
+              "RelativeToolTip": "TranThiThaoNhu_2124110075\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAXAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-12T10:40:34.313Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "Category.cs",
+              "DocumentMoniker": "D:\\TranThiThaoNhu_2124110075\\TranThiThaoNhu_2124110075\\Models\\Category.cs",
+              "RelativeDocumentMoniker": "TranThiThaoNhu_2124110075\\Models\\Category.cs",
+              "ToolTip": "D:\\TranThiThaoNhu_2124110075\\TranThiThaoNhu_2124110075\\Models\\Category.cs",
+              "RelativeToolTip": "TranThiThaoNhu_2124110075\\Models\\Category.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-12T10:21:21.628Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

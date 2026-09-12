@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "0OFHVhBfU0A=",
+  "success": true,
+  "projectFilePath": "D:\\TranThiThaoNhu_2124110075\\MiniSupermarket.WinForms\\MiniSupermarket.WinForms.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Admin\\.nuget\\packages\\system.io.pipelines\\10.0.12\\system.io.pipelines.10.0.12.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\system.net.http.json\\10.0.12\\system.net.http.json.10.0.12.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\system.text.encodings.web\\10.0.12\\system.text.encodings.web.10.0.12.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\system.text.json\\10.0.12\\system.text.json.10.0.12.nupkg.sha512"
+  ],
+  "logs": []
+}
