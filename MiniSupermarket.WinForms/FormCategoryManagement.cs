@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Windows.Forms;
 
 namespace MiniSupermarket.WinForms
@@ -17,6 +18,24 @@ namespace MiniSupermarket.WinForms
             InitializeComponent();
         }
 
+        // Bổ sung phương thức cấu hình HttpClient có gắn kèm Token bảo mật
+        private HttpClient GetAuthenticatedClient()
+        {
+            var client = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7005/api/")
+            };
+
+            // Đính kèm Token vào Header theo chuẩn Bearer Authentication
+            if (!string.IsNullOrEmpty(SessionManager.JwtToken))
+            {
+                client.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", SessionManager.JwtToken);
+            }
+
+            return client;
+        }
+
         // Sự kiện Form vừa bật lên: Tự động tải dữ liệu từ API lên bảng
         private async void FormCategoryManagement_Load(object sender, EventArgs e)
         {
@@ -28,8 +47,10 @@ namespace MiniSupermarket.WinForms
         {
             try
             {
+                using var client = GetAuthenticatedClient();
+
                 // Gửi request GET tới endpoint "categories", tự động giải tuần tự hóa chuỗi JSON thành List<CategoryDto>
-                var categories = await _client.GetFromJsonAsync<List<CategoryDto>>("categories");
+                var categories = await client.GetFromJsonAsync<List<CategoryDto>>("categories");
                 dgvCategories.DataSource = categories; // Gán nguồn dữ liệu cho bảng hiển thị
             }
             catch (Exception ex)
@@ -66,7 +87,9 @@ namespace MiniSupermarket.WinForms
             };
 
             // Gửi request POST kèm theo đối tượng dạng JSON
-            var response = await _client.PostAsJsonAsync("categories", newCat);
+            using var client = GetAuthenticatedClient();
+            var response = await client.PostAsJsonAsync("categories", newCat);
+
             if (response.IsSuccessStatusCode)
             {
                 MessageBox.Show("Thêm mới thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -97,7 +120,9 @@ namespace MiniSupermarket.WinForms
             };
 
             // Gửi request PUT kèm ID trên đường dẫn URI
-            var response = await _client.PutAsJsonAsync($"categories/{id}", updateCat);
+            using var client = GetAuthenticatedClient();
+            var response = await client.PutAsJsonAsync($"categories/{id}", updateCat);
+
             if (response.IsSuccessStatusCode)
             {
                 MessageBox.Show("Cập nhật thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -121,9 +146,12 @@ namespace MiniSupermarket.WinForms
 
             int id = int.Parse(txtId.Text);
             var confirm = MessageBox.Show($"Bạn có chắc muốn xóa nhóm hàng ID = {id}?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
             if (confirm == DialogResult.Yes)
             {
-                var response = await _client.DeleteAsync($"categories/{id}");
+                using var client = GetAuthenticatedClient();
+                var response = await client.DeleteAsync($"categories/{id}");
+
                 if (response.IsSuccessStatusCode)
                 {
                     MessageBox.Show("Xóa thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -141,6 +169,7 @@ namespace MiniSupermarket.WinForms
         private async void btnSearch_Click(object sender, EventArgs e)
         {
             string keyword = textBox1.Text.Trim();
+
             if (string.IsNullOrEmpty(keyword))
             {
                 await LoadDataAsync(); // Nếu ô tìm kiếm trống thì tải lại toàn bộ
@@ -149,8 +178,10 @@ namespace MiniSupermarket.WinForms
 
             try
             {
+                using var client = GetAuthenticatedClient();
+
                 // Gọi API dạng: GET /api/categories/search?keyword=abc
-                var result = await _client.GetFromJsonAsync<List<CategoryDto>>($"categories/search?keyword={keyword}");
+                var result = await client.GetFromJsonAsync<List<CategoryDto>>($"categories/search?keyword={keyword}");
                 dgvCategories.DataSource = result;
             }
             catch (Exception)
