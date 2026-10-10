@@ -1,303 +1,422 @@
-﻿using System;
+﻿
+// Họ tên: Trần Thị Thảo Như
+// MSSV: 2124110075
+// Lớp: CCQ2411C
+// Môn: lập trình ứng dụng
+
+using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Text.Json;
 
 namespace MiniSupermarket.WinForms
 {
     public partial class FormCustomerManagement : Form
     {
-        // Khai báo các control giao diện bằng code thuần
-        private DataGridView dgvCustomers = null!;
-        private TextBox txtCustomerId = null!;
-        private TextBox txtCustomerName = null!;
-        private TextBox txtPhoneNumber = null!;
+        private DataGridView dgvCustomer = null!;
+        private TextBox txtName = null!;
+        private TextBox txtPhone = null!;
         private TextBox txtAddress = null!;
         private TextBox txtRewardPoints = null!;
-        private TextBox txtMembershipRank = null!;
+        private ComboBox cboMembershipRank = null!;
         private Button btnAdd = null!;
         private Button btnUpdate = null!;
         private Button btnDelete = null!;
-        private Button btnLoad = null!;
+        private Button btnRefresh = null!;
 
         public FormCustomerManagement()
         {
             InitializeComponent();
-            InitializeCustomComponents(); // Gọi hàm tự dựng giao diện
+            InitializeCustomLayout();
+            LoadCustomerData();
         }
 
-        // Hàm tự động khởi tạo giao diện 100% bằng code khớp với phong cách dự án
-        private void InitializeCustomComponents()
+        private void InitializeCustomLayout()
         {
-            this.Text = "QUẢN LÝ KHÁCH HÀNG & TÍCH ĐIỂM";
-            this.Size = new Size(1050, 620);
-            this.BackColor = Color.FromArgb(244, 245, 247);
+            Text = "Quản lý Khách hàng";
+            FormBorderStyle = FormBorderStyle.None;
+            Dock = DockStyle.Fill;
+            BackColor = Color.FromArgb(244, 245, 247);
 
-            // 1. DataGridView hiển thị danh sách khách hàng (bên trái)
-            dgvCustomers = new DataGridView
+            Controls.Add(new Label
             {
-                Location = new Point(20, 20),
-                Size = new Size(620, 520),
-                AutoGenerateColumns = true,
+                Text = "Quản lý Khách hàng",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = Color.FromArgb(33, 37, 41),
+                Location = new Point(25, 20),
+                AutoSize = true
+            });
+
+            Controls.Add(new Label
+            {
+                Text = "Thêm, cập nhật và quản lý thông tin khách hàng",
+                Font = new Font("Segoe UI", 10),
+                ForeColor = Color.FromArgb(108, 117, 125),
+                Location = new Point(27, 58),
+                AutoSize = true
+            });
+
+            var tablePanel = new Panel
+            {
+                Location = new Point(25, 95),
+                Size = new Size(650, 480),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            Controls.Add(tablePanel);
+
+            dgvCustomer = new DataGridView
+            {
+                Location = new Point(10, 10),
+                Size = new Size(628, 458),
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                ReadOnly = true
+                ReadOnly = true,
+                MultiSelect = false,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                RowHeadersVisible = false,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                AutoGenerateColumns = true
             };
-            dgvCustomers.CellClick += dgvCustomers_CellClick;
-            this.Controls.Add(dgvCustomers);
+            dgvCustomer.SelectionChanged += DgvCustomer_SelectionChanged;
+            tablePanel.Controls.Add(dgvCustomer);
 
-            int startX = 660;
-            int startY = 20;
-            int spacing = 45;
+            var detailPanel = new Panel
+            {
+                Location = new Point(695, 95),
+                Size = new Size(350, 480),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            Controls.Add(detailPanel);
 
-            // 2. Các ô nhập liệu và nhãn thông tin (bên phải)
-            this.Controls.Add(new Label { Text = "Mã KH:", Location = new Point(startX, startY), AutoSize = true });
-            txtCustomerId = new TextBox { Location = new Point(startX + 120, startY), Size = new Size(220, 25), ReadOnly = true };
-            this.Controls.Add(txtCustomerId);
+            detailPanel.Controls.Add(new Label
+            {
+                Text = "Thông tin khách hàng",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(33, 37, 41),
+                Location = new Point(20, 15),
+                AutoSize = true
+            });
 
-            startY += spacing;
-            this.Controls.Add(new Label { Text = "Tên khách hàng:", Location = new Point(startX, startY), AutoSize = true });
-            txtCustomerName = new TextBox { Location = new Point(startX + 120, startY), Size = new Size(220, 25) };
-            this.Controls.Add(txtCustomerName);
+            CreateLabel(detailPanel, "Họ tên", 20, 50);
+            txtName = CreateTextBox(detailPanel, 20, 72);
 
-            startY += spacing;
-            this.Controls.Add(new Label { Text = "Số điện thoại:", Location = new Point(startX, startY), AutoSize = true });
-            txtPhoneNumber = new TextBox { Location = new Point(startX + 120, startY), Size = new Size(220, 25) };
-            this.Controls.Add(txtPhoneNumber);
+            CreateLabel(detailPanel, "Số điện thoại", 20, 110);
+            txtPhone = CreateTextBox(detailPanel, 20, 132);
 
-            startY += spacing;
-            this.Controls.Add(new Label { Text = "Địa chỉ:", Location = new Point(startX, startY), AutoSize = true });
-            txtAddress = new TextBox { Location = new Point(startX + 120, startY), Size = new Size(220, 25) };
-            this.Controls.Add(txtAddress);
+            CreateLabel(detailPanel, "Địa chỉ", 20, 170);
+            txtAddress = CreateTextBox(detailPanel, 20, 192);
 
-            startY += spacing;
-            this.Controls.Add(new Label { Text = "Điểm thưởng:", Location = new Point(startX, startY), AutoSize = true });
-            txtRewardPoints = new TextBox { Location = new Point(startX + 120, startY), Size = new Size(220, 25), ReadOnly = true };
-            this.Controls.Add(txtRewardPoints);
+            CreateLabel(detailPanel, "Điểm thưởng", 20, 230);
+            txtRewardPoints = CreateTextBox(detailPanel, 20, 252);
 
-            startY += spacing;
-            this.Controls.Add(new Label { Text = "Hạng thành viên:", Location = new Point(startX, startY), AutoSize = true });
-            txtMembershipRank = new TextBox { Location = new Point(startX + 120, startY), Size = new Size(220, 25), ReadOnly = true };
-            this.Controls.Add(txtMembershipRank);
+            CreateLabel(detailPanel, "Hạng thành viên", 20, 290);
+            cboMembershipRank = new ComboBox
+            {
+                Location = new Point(20, 312),
+                Size = new Size(310, 28),
+                Font = new Font("Segoe UI", 10),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cboMembershipRank.Items.AddRange(new object[] { "Chuẩn", "Bạc", "Vàng" });
+            cboMembershipRank.SelectedIndex = 0;
+            detailPanel.Controls.Add(cboMembershipRank);
 
-            // 3. Các nút Thêm, Sửa, Xóa, Tải lại
-            startY += spacing + 25;
-            btnAdd = new Button { Text = "Thêm mới", Location = new Point(startX, startY), Size = new Size(105, 38), BackColor = Color.FromArgb(40, 167, 69), ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
-            btnAdd.Click += btnAdd_Click;
-            this.Controls.Add(btnAdd);
+            btnAdd = CreateButton("Thêm mới", 20, 355, Color.FromArgb(40, 167, 69));
+            btnAdd.Click += BtnAdd_Click;
+            detailPanel.Controls.Add(btnAdd);
 
-            btnUpdate = new Button { Text = "Cập nhật", Location = new Point(startX + 115, startY), Size = new Size(105, 38), BackColor = Color.FromArgb(23, 162, 184), ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
-            btnUpdate.Click += btnUpdate_Click;
-            this.Controls.Add(btnUpdate);
+            btnUpdate = CreateButton("Cập nhật", 180, 355, Color.FromArgb(23, 162, 184));
+            btnUpdate.Click += BtnUpdate_Click;
+            detailPanel.Controls.Add(btnUpdate);
 
-            startY += 48;
-            btnDelete = new Button { Text = "Xóa", Location = new Point(startX, startY), Size = new Size(105, 38), BackColor = Color.FromArgb(220, 53, 69), ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
-            btnDelete.Click += btnDelete_Click;
-            this.Controls.Add(btnDelete);
+            btnDelete = CreateButton("Xóa", 20, 405, Color.FromArgb(220, 53, 69));
+            btnDelete.Click += BtnDelete_Click;
+            detailPanel.Controls.Add(btnDelete);
 
-            btnLoad = new Button { Text = "Tải lại", Location = new Point(startX + 115, startY), Size = new Size(105, 38), BackColor = Color.FromArgb(108, 117, 125), ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
-            btnLoad.Click += btnLoad_Click;
-            this.Controls.Add(btnLoad);
+            btnRefresh = CreateButton("Làm mới", 180, 405, Color.FromArgb(108, 117, 125));
+            btnRefresh.Click += BtnRefresh_Click;
+            detailPanel.Controls.Add(btnRefresh);
         }
 
-        // Cấu hình HttpClient gắn kèm Token bảo mật theo chuẩn của dự án
-        private HttpClient GetAuthenticatedClient()
+        private Label CreateLabel(Control parent, string text, int x, int y)
         {
-            var client = new HttpClient
+            var label = new Label
             {
-                BaseAddress = new Uri("https://localhost:7005/api/")
+                Text = text,
+                Location = new Point(x, y),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.FromArgb(73, 80, 87)
             };
 
-            if (!string.IsNullOrEmpty(SessionManager.JwtToken))
-            {
-                client.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", SessionManager.JwtToken);
-            }
-
-            return client;
+            parent.Controls.Add(label);
+            return label;
         }
 
-        // Sự kiện Load Form
-        private async void FormCustomerManagement_Load(object? sender, EventArgs e)
+        private TextBox CreateTextBox(Control parent, int x, int y)
         {
-            await LoadDataAsync();
+            var textBox = new TextBox
+            {
+                Location = new Point(x, y),
+                Size = new Size(310, 27),
+                Font = new Font("Segoe UI", 10)
+            };
+
+            parent.Controls.Add(textBox);
+            return textBox;
         }
 
-        // Hàm gọi API GET danh sách khách hàng
-        private async Task LoadDataAsync()
+        private Button CreateButton(string text, int x, int y, Color color)
+        {
+            return new Button
+            {
+                Text = text,
+                Location = new Point(x, y),
+                Size = new Size(145, 38),
+                BackColor = color,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+        }
+
+        private async void LoadCustomerData()
         {
             try
             {
-                using var client = GetAuthenticatedClient();
-                var customers = await client.GetFromJsonAsync<List<CustomerDto>>("customers");
-                dgvCustomers.DataSource = customers;
+                var jsonResult = await ApiClientService.GetDataWithTokenAsync("customers");
+
+                var customers = JsonSerializer.Deserialize<List<CustomerModel>>(
+                    jsonResult,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                dgvCustomer.DataSource = null;
+                dgvCustomer.DataSource = customers ?? new List<CustomerModel>();
+
+                if (dgvCustomer.Columns["CustomerId"] != null)
+                    dgvCustomer.Columns["CustomerId"]!.HeaderText = "Mã khách hàng";
+
+                if (dgvCustomer.Columns["CustomerName"] != null)
+                    dgvCustomer.Columns["CustomerName"]!.HeaderText = "Họ tên";
+
+                if (dgvCustomer.Columns["PhoneNumber"] != null)
+                    dgvCustomer.Columns["PhoneNumber"]!.HeaderText = "Số điện thoại";
+
+                if (dgvCustomer.Columns["Address"] != null)
+                    dgvCustomer.Columns["Address"]!.HeaderText = "Địa chỉ";
+
+                if (dgvCustomer.Columns["RewardPoints"] != null)
+                    dgvCustomer.Columns["RewardPoints"]!.HeaderText = "Điểm thưởng";
+
+                if (dgvCustomer.Columns["MembershipRank"] != null)
+                    dgvCustomer.Columns["MembershipRank"]!.HeaderText = "Hạng thành viên";
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi kết nối Server: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(
+                    "Không thể tải danh sách khách hàng: " + ex.Message,
+                    "Lỗi",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
         }
 
-        private async void btnLoad_Click(object? sender, EventArgs e)
+        private void DgvCustomer_SelectionChanged(object? sender, EventArgs e)
         {
-            await LoadDataAsync();
-        }
-
-        // Click dòng trên DataGridView để đưa dữ liệu lên các ô nhập
-        private void dgvCustomers_CellClick(object? sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex >= 0)
-            {
-                DataGridViewRow row = dgvCustomers.Rows[e.RowIndex];
-                txtCustomerId.Text = row.Cells["CustomerId"].Value?.ToString() ?? string.Empty;
-                txtCustomerName.Text = row.Cells["CustomerName"].Value?.ToString() ?? string.Empty;
-                txtPhoneNumber.Text = row.Cells["PhoneNumber"].Value?.ToString() ?? string.Empty;
-                txtAddress.Text = row.Cells["Address"]?.Value?.ToString() ?? string.Empty;
-                txtRewardPoints.Text = row.Cells["RewardPoints"]?.Value?.ToString() ?? "0";
-                txtMembershipRank.Text = row.Cells["MembershipRank"]?.Value?.ToString() ?? string.Empty;
-            }
-        }
-
-        // Thêm mới khách hàng (POST)
-        private async void btnAdd_Click(object? sender, EventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(txtCustomerName.Text) || string.IsNullOrWhiteSpace(txtPhoneNumber.Text))
-            {
-                MessageBox.Show("Vui lòng nhập tên và số điện thoại khách hàng!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (dgvCustomer.SelectedRows.Count == 0)
                 return;
+
+            var row = dgvCustomer.SelectedRows[0];
+
+            txtName.Text = row.Cells["CustomerName"].Value?.ToString() ?? "";
+            txtPhone.Text = row.Cells["PhoneNumber"].Value?.ToString() ?? "";
+            txtAddress.Text = row.Cells["Address"].Value?.ToString() ?? "";
+            txtRewardPoints.Text = row.Cells["RewardPoints"].Value?.ToString() ?? "0";
+
+            string rank = row.Cells["MembershipRank"].Value?.ToString() ?? "Chuẩn";
+            cboMembershipRank.SelectedItem = rank;
+
+            if (cboMembershipRank.SelectedIndex < 0)
+                cboMembershipRank.SelectedIndex = 0;
+        }
+
+        private bool ValidateInput()
+        {
+            if (string.IsNullOrWhiteSpace(txtName.Text))
+            {
+                MessageBox.Show("Vui lòng nhập họ tên khách hàng!");
+                txtName.Focus();
+                return false;
             }
 
-            var newCust = new
+            if (string.IsNullOrWhiteSpace(txtPhone.Text))
             {
-                CustomerName = txtCustomerName.Text.Trim(),
-                PhoneNumber = txtPhoneNumber.Text.Trim(),
+                MessageBox.Show("Vui lòng nhập số điện thoại!");
+                txtPhone.Focus();
+                return false;
+            }
+
+            if (!int.TryParse(txtRewardPoints.Text.Trim(), out int points) || points < 0)
+            {
+                MessageBox.Show("Điểm thưởng phải là số nguyên không âm!");
+                txtRewardPoints.Focus();
+                return false;
+            }
+
+            return true;
+        }
+
+        private object GetCustomerInput()
+        {
+            return new
+            {
+                CustomerName = txtName.Text.Trim(),
+                PhoneNumber = txtPhone.Text.Trim(),
                 Address = txtAddress.Text.Trim(),
-                RewardPoints = 0,
-                MembershipRank = "Chuẩn"
+                RewardPoints = int.Parse(txtRewardPoints.Text.Trim()),
+                MembershipRank = cboMembershipRank.SelectedItem?.ToString() ?? "Chuẩn"
             };
+        }
+
+        private async void BtnAdd_Click(object? sender, EventArgs e)
+        {
+            if (!ValidateInput())
+                return;
 
             try
             {
-                using var client = GetAuthenticatedClient();
-                var response = await client.PostAsJsonAsync("customers", newCust);
+                bool success = await ApiClientService.PostDataWithTokenAsync(
+                    "customers", GetCustomerInput());
 
-                if (response.IsSuccessStatusCode)
+                if (success)
                 {
-                    MessageBox.Show("Thêm khách hàng thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    await LoadDataAsync();
+                    MessageBox.Show("Thêm khách hàng thành công!");
                     ClearInputs();
+                    LoadCustomerData();
                 }
                 else
                 {
-                    MessageBox.Show("Thêm mới thất bại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Thêm khách hàng thất bại!");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Lỗi thêm khách hàng: " + ex.Message);
             }
         }
 
-        // Cập nhật thông tin khách hàng (PUT)
-        private async void btnUpdate_Click(object? sender, EventArgs e)
+        private async void BtnUpdate_Click(object? sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(txtCustomerId.Text))
+            if (dgvCustomer.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Vui lòng chọn khách hàng cần sửa trên bảng!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng chọn khách hàng cần cập nhật!");
                 return;
             }
 
-            int id = int.Parse(txtCustomerId.Text);
-            var updateCust = new
-            {
-                CustomerId = id,
-                CustomerName = txtCustomerName.Text.Trim(),
-                PhoneNumber = txtPhoneNumber.Text.Trim(),
-                Address = txtAddress.Text.Trim()
-            };
+            if (!ValidateInput())
+                return;
+
+            var customerId = dgvCustomer.SelectedRows[0].Cells["CustomerId"].Value;
 
             try
             {
-                using var client = GetAuthenticatedClient();
-                var response = await client.PutAsJsonAsync($"customers/{id}", updateCust);
+                bool success = await ApiClientService.PutDataWithTokenAsync(
+                    $"customers/{customerId}", GetCustomerInput());
 
-                if (response.IsSuccessStatusCode)
+                if (success)
                 {
-                    MessageBox.Show("Cập nhật thông tin thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    await LoadDataAsync();
-                    ClearInputs();
+                    MessageBox.Show("Cập nhật khách hàng thành công!");
+                    LoadCustomerData();
                 }
                 else
                 {
-                    MessageBox.Show("Cập nhật thất bại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Cập nhật khách hàng thất bại!");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Lỗi cập nhật khách hàng: " + ex.Message);
             }
         }
 
-        // Xóa khách hàng (DELETE)
-        private async void btnDelete_Click(object? sender, EventArgs e)
+        private async void BtnDelete_Click(object? sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(txtCustomerId.Text))
+            if (dgvCustomer.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Vui lòng chọn khách hàng cần xóa!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng chọn khách hàng cần xóa!");
                 return;
             }
 
-            int id = int.Parse(txtCustomerId.Text);
-            var confirm = MessageBox.Show($"Bạn có chắc muốn xóa khách hàng ID = {id}?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            var customerId = dgvCustomer.SelectedRows[0].Cells["CustomerId"].Value;
 
-            if (confirm == DialogResult.Yes)
+            var result = MessageBox.Show(
+                "Bạn có chắc chắn muốn xóa khách hàng này?",
+                "Xác nhận",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result != DialogResult.Yes)
+                return;
+
+            try
             {
-                try
-                {
-                    using var client = GetAuthenticatedClient();
-                    var response = await client.DeleteAsync($"customers/{id}");
+                bool success = await ApiClientService.DeleteDataWithTokenAsync(
+                    $"customers/{customerId}");
 
-                    if (response.IsSuccessStatusCode)
-                    {
-                        MessageBox.Show("Đã xóa khách hàng thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        await LoadDataAsync();
-                        ClearInputs();
-                    }
-                    else
-                    {
-                        MessageBox.Show("Xóa thất bại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    }
-                }
-                catch (Exception ex)
+                if (success)
                 {
-                    MessageBox.Show("Lỗi: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Xóa khách hàng thành công!");
+                    ClearInputs();
+                    LoadCustomerData();
                 }
+                else
+                {
+                    MessageBox.Show("Xóa khách hàng thất bại!");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi xóa khách hàng: " + ex.Message);
             }
         }
 
-        // Hàm xóa trắng ô nhập liệu
+        private void BtnRefresh_Click(object? sender, EventArgs e)
+        {
+            ClearInputs();
+            LoadCustomerData();
+        }
+
         private void ClearInputs()
         {
-            txtCustomerId.Text = "";
-            txtCustomerName.Text = "";
-            txtPhoneNumber.Text = "";
-            txtAddress.Text = "";
-            txtRewardPoints.Text = "";
-            txtMembershipRank.Text = "";
+            txtName.Clear();
+            txtPhone.Clear();
+            txtAddress.Clear();
+            txtRewardPoints.Text = "0";
+            cboMembershipRank.SelectedIndex = 0;
+            dgvCustomer.ClearSelection();
+        }
+
+        private void FormCustomerManagement_Load(object sender, EventArgs e)
+        {
         }
     }
 
-    // Lớp DTO trung gian ánh xạ dữ liệu khách hàng từ API
-    public class CustomerDto
+    public class CustomerModel
     {
         public int CustomerId { get; set; }
         public string CustomerName { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
-        public string Address { get; set; } = string.Empty;
+        public string? Address { get; set; }
         public int RewardPoints { get; set; }
-        public string MembershipRank { get; set; } = string.Empty;
+        public string MembershipRank { get; set; } = "Chuẩn";
     }
 }

@@ -1,4 +1,5 @@
-﻿// Họ tên: Trần Thị Thảo Như
+﻿
+// Họ tên: Trần Thị Thảo Như
 // MSSV: 2124110075
 // Lớp: CCQ2411C
 // Môn: lập trình ứng dụng
@@ -23,7 +24,7 @@ namespace TranThiThaoNhu_2124110075.API.Controllers
             _context = context;
         }
 
-        // 1. Lấy toàn bộ danh sách nhóm hàng
+        // GET: api/Categories
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -34,46 +35,69 @@ namespace TranThiThaoNhu_2124110075.API.Controllers
             return Ok(categories);
         }
 
-        // 2. Lấy nhóm hàng theo ID
+        // GET: api/Categories/1
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var category = await _context.Categories
-                .FindAsync(id);
+            var category = await _context.Categories.FindAsync(id);
 
             if (category == null)
             {
-                return NotFound(new { message = "Không tìm thấy nhóm hàng!" });
+                return NotFound(new
+                {
+                    message = "Không tìm thấy danh mục!"
+                });
             }
 
             return Ok(category);
         }
 
-        // 3. Tìm kiếm nhóm hàng
+        // GET: api/Categories/search?keyword=banh
         [HttpGet("search")]
         public async Task<IActionResult> Search([FromQuery] string keyword)
         {
             if (string.IsNullOrWhiteSpace(keyword))
             {
-                return BadRequest(new { message = "Vui lòng nhập từ khóa!" });
+                return BadRequest(new
+                {
+                    message = "Vui lòng nhập từ khóa!"
+                });
             }
 
             var result = await _context.Categories
-                .Where(c => c.CategoryName.Contains(keyword))
                 .AsNoTracking()
+                .Where(c => c.CategoryName.Contains(keyword.Trim()))
                 .ToListAsync();
 
             return Ok(result);
         }
 
-        // 4. Thêm nhóm hàng
+        // POST: api/Categories
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Category newCat)
         {
             if (string.IsNullOrWhiteSpace(newCat.CategoryName))
             {
-                return BadRequest(new { message = "Tên không được trống!" });
+                return BadRequest(new
+                {
+                    message = "Tên danh mục không được để trống!"
+                });
             }
+
+            string categoryName = newCat.CategoryName.Trim();
+
+            bool nameExists = await _context.Categories
+                .AnyAsync(c => c.CategoryName == categoryName);
+
+            if (nameExists)
+            {
+                return BadRequest(new
+                {
+                    message = "Tên danh mục đã tồn tại!"
+                });
+            }
+
+            newCat.CategoryName = categoryName;
 
             _context.Categories.Add(newCat);
             await _context.SaveChangesAsync();
@@ -85,31 +109,57 @@ namespace TranThiThaoNhu_2124110075.API.Controllers
             );
         }
 
-        // 5. Cập nhật nhóm hàng
+        // PUT: api/Categories/1
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(
             int id,
             [FromBody] Category updateCat)
         {
+            if (string.IsNullOrWhiteSpace(updateCat.CategoryName))
+            {
+                return BadRequest(new
+                {
+                    message = "Tên danh mục không được để trống!"
+                });
+            }
+
             var category = await _context.Categories.FindAsync(id);
 
             if (category == null)
             {
                 return NotFound(new
                 {
-                    message = "Không tìm thấy nhóm hàng cần sửa!"
+                    message = "Không tìm thấy danh mục cần sửa!"
                 });
             }
 
-            category.CategoryName = updateCat.CategoryName;
+            string categoryName = updateCat.CategoryName.Trim();
+
+            bool nameExists = await _context.Categories.AnyAsync(
+                c => c.CategoryName == categoryName &&
+                     c.CategoryId != id);
+
+            if (nameExists)
+            {
+                return BadRequest(new
+                {
+                    message = "Tên danh mục đã được sử dụng!"
+                });
+            }
+
+            category.CategoryName = categoryName;
             category.Description = updateCat.Description;
 
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(new
+            {
+                message = "Cập nhật danh mục thành công!",
+                category
+            });
         }
 
-        // 6. Xóa nhóm hàng
+        // DELETE: api/Categories/1
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -119,17 +169,32 @@ namespace TranThiThaoNhu_2124110075.API.Controllers
             {
                 return NotFound(new
                 {
-                    message = "Không tìm thấy nhóm hàng cần xóa!"
+                    message = "Không tìm thấy danh mục cần xóa!"
+                });
+            }
+
+            // Kiểm tra sản phẩm thuộc danh mục trước khi xóa
+            bool hasProducts = await _context.Products
+                .AnyAsync(p => p.CategoryId == id);
+
+            if (hasProducts)
+            {
+                return BadRequest(new
+                {
+                    message = "Không thể xóa danh mục vì vẫn còn sản phẩm thuộc danh mục này. Vui lòng chuyển sản phẩm sang danh mục khác trước."
                 });
             }
 
             _context.Categories.Remove(category);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(new
+            {
+                message = "Xóa danh mục thành công!"
+            });
         }
 
-        // 7. Kiểm tra quyền Admin
+        // GET: api/Categories/admin-dashboard
         [HttpGet("admin-dashboard")]
         [Authorize(Roles = "Admin")]
         public IActionResult GetAdminDashboard()
@@ -140,7 +205,7 @@ namespace TranThiThaoNhu_2124110075.API.Controllers
             });
         }
 
-        // 8. Kiểm tra quyền nhân viên
+        // GET: api/Categories/staff-pos
         [HttpGet("staff-pos")]
         [Authorize(Roles = "Admin,Cashier")]
         public IActionResult GetStaffPos()

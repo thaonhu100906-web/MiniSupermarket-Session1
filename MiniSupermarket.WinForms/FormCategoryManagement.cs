@@ -1,209 +1,453 @@
-﻿using System.Net.Http.Headers;
-using System.Net.Http.Json;
+﻿
+// Họ tên: Trần Thị Thảo Như
+// MSSV: 2124110075
+// Lớp: CCQ2411C
+// Môn: lập trình ứng dụng
+
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Net;
+using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace MiniSupermarket.WinForms
 {
     public partial class FormCategoryManagement : Form
     {
+        private DataGridView dgvCategory = null!;
+        private TextBox txtCategoryName = null!;
+        private TextBox txtDescription = null!;
+        private Button btnAdd = null!;
+        private Button btnUpdate = null!;
+        private Button btnDelete = null!;
+        private Button btnRefresh = null!;
 
-        // Khởi tạo HttpClient tĩnh kết nối trực tiếp đến Web API (Đảm bảo số Port https://localhost:7123 khớp với API của bạn)
-        private static readonly HttpClient _client = new HttpClient
-        {
-            BaseAddress = new Uri("https://localhost:7005/api/")
-        };
+        private readonly Color BackgroundColor = Color.FromArgb(244, 246, 249);
+        private readonly Color PrimaryColor = Color.FromArgb(41, 100, 180);
+        private readonly Color TextColor = Color.FromArgb(35, 42, 55);
 
         public FormCategoryManagement()
         {
             InitializeComponent();
+            InitializeCustomLayout();
+            LoadCategoryData();
         }
 
-        // Bổ sung phương thức cấu hình HttpClient có gắn kèm Token bảo mật
-        private HttpClient GetAuthenticatedClient()
+        private void InitializeCustomLayout()
         {
-            var client = new HttpClient
+            Text = "Quản lý Danh mục";
+            BackColor = BackgroundColor;
+            FormBorderStyle = FormBorderStyle.None;
+            Dock = DockStyle.Fill;
+            MinimumSize = new Size(700, 450);
+
+            Label lblTitle = new Label
             {
-                BaseAddress = new Uri("https://localhost:7005/api/")
+                Text = "📁  QUẢN LÝ DANH MỤC",
+                Font = new Font("Segoe UI", 18F, FontStyle.Bold),
+                ForeColor = TextColor,
+                AutoSize = true,
+                Location = new Point(20, 15)
             };
 
-            // Đính kèm Token vào Header theo chuẩn Bearer Authentication
-            if (!string.IsNullOrEmpty(SessionManager.JwtToken))
+            Label lblSubtitle = new Label
             {
-                client.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", SessionManager.JwtToken);
-            }
+                Text = "Quản lý nhóm hàng và danh mục sản phẩm trong hệ thống",
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = Color.FromArgb(110, 118, 130),
+                AutoSize = true,
+                Location = new Point(23, 50)
+            };
 
-            return client;
+            Controls.Add(lblTitle);
+            Controls.Add(lblSubtitle);
+
+            TableLayoutPanel contentLayout = new TableLayoutPanel
+            {
+                Location = new Point(20, 85),
+                Size = new Size(ClientSize.Width - 40, ClientSize.Height - 105),
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom |
+                         AnchorStyles.Left | AnchorStyles.Right,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = BackgroundColor,
+                Padding = new Padding(0),
+                Margin = new Padding(0)
+            };
+
+            contentLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65F));
+            contentLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35F));
+            contentLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            Panel tablePanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new Padding(12),
+                Margin = new Padding(0, 0, 10, 0)
+            };
+
+            Label lblList = new Label
+            {
+                Text = "Danh sách danh mục",
+                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                ForeColor = TextColor,
+                Dock = DockStyle.Top,
+                Height = 35
+            };
+
+            dgvCategory = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                ReadOnly = true,
+                MultiSelect = false,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                RowHeadersVisible = false,
+                AutoGenerateColumns = true,
+                Font = new Font("Segoe UI", 9.5F),
+                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None
+            };
+
+            dgvCategory.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+            {
+                BackColor = PrimaryColor,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Alignment = DataGridViewContentAlignment.MiddleLeft
+            };
+
+            dgvCategory.EnableHeadersVisualStyles = false;
+            dgvCategory.RowTemplate.Height = 35;
+            dgvCategory.SelectionChanged += DgvCategory_SelectionChanged;
+
+            tablePanel.Controls.Add(dgvCategory);
+            tablePanel.Controls.Add(lblList);
+
+            Panel detailPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new Padding(18),
+                Margin = new Padding(0)
+            };
+
+            Label lblDetail = new Label
+            {
+                Text = "Thông tin danh mục",
+                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                ForeColor = TextColor,
+                Location = new Point(18, 18),
+                AutoSize = true
+            };
+
+            Label lblName = new Label
+            {
+                Text = "Tên danh mục",
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = TextColor,
+                Location = new Point(18, 65),
+                AutoSize = true
+            };
+
+            txtCategoryName = new TextBox
+            {
+                Location = new Point(18, 90),
+                Width = 250,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font = new Font("Segoe UI", 10F)
+            };
+
+            Label lblDesc = new Label
+            {
+                Text = "Mô tả",
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = TextColor,
+                Location = new Point(18, 135),
+                AutoSize = true
+            };
+
+            txtDescription = new TextBox
+            {
+                Location = new Point(18, 160),
+                Width = 250,
+                Height = 85,
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font = new Font("Segoe UI", 10F)
+            };
+
+            btnAdd = CreateActionButton("＋  Thêm mới", Color.FromArgb(40, 167, 69));
+            btnUpdate = CreateActionButton("✎  Cập nhật", Color.FromArgb(41, 100, 180));
+            btnDelete = CreateActionButton("✕  Xóa", Color.FromArgb(220, 53, 69));
+            btnRefresh = CreateActionButton("↻  Làm mới", Color.FromArgb(108, 117, 125));
+
+            btnAdd.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            btnUpdate.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            btnDelete.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            btnRefresh.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+
+            btnAdd.Location = new Point(18, 275);
+            btnUpdate.Location = new Point(18, 325);
+            btnDelete.Location = new Point(18, 375);
+            btnRefresh.Location = new Point(18, 425);
+
+            detailPanel.SizeChanged += (s, e) =>
+            {
+                int buttonWidth = Math.Max(100, detailPanel.ClientSize.Width - 36);
+                btnAdd.Width = buttonWidth;
+                btnUpdate.Width = buttonWidth;
+                btnDelete.Width = buttonWidth;
+                btnRefresh.Width = buttonWidth;
+                txtCategoryName.Width = buttonWidth;
+                txtDescription.Width = buttonWidth;
+            };
+
+            btnAdd.Click += BtnAdd_Click;
+            btnUpdate.Click += BtnUpdate_Click;
+            btnDelete.Click += BtnDelete_Click;
+            btnRefresh.Click += BtnRefresh_Click;
+
+            detailPanel.Controls.Add(lblDetail);
+            detailPanel.Controls.Add(lblName);
+            detailPanel.Controls.Add(txtCategoryName);
+            detailPanel.Controls.Add(lblDesc);
+            detailPanel.Controls.Add(txtDescription);
+            detailPanel.Controls.Add(btnAdd);
+            detailPanel.Controls.Add(btnUpdate);
+            detailPanel.Controls.Add(btnDelete);
+            detailPanel.Controls.Add(btnRefresh);
+
+            contentLayout.Controls.Add(tablePanel, 0, 0);
+            contentLayout.Controls.Add(detailPanel, 1, 0);
+            Controls.Add(contentLayout);
         }
 
-        // Sự kiện Form vừa bật lên: Tự động tải dữ liệu từ API lên bảng
-        private async void FormCategoryManagement_Load(object sender, EventArgs e)
+        private Button CreateActionButton(string text, Color color)
         {
-            await LoadDataAsync();
+            Button button = new Button
+            {
+                Text = text,
+                Size = new Size(145, 42),
+                BackColor = color,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+
+            button.FlatAppearance.BorderSize = 0;
+            return button;
         }
 
-        // Hàm dùng chung: Gọi API GET lấy danh sách và đổ lên DataGridView
-        private async Task LoadDataAsync()
+        private async void LoadCategoryData()
         {
             try
             {
-                using var client = GetAuthenticatedClient();
+                string jsonResult = await ApiClientService.GetDataWithTokenAsync("categories");
 
-                // Gửi request GET tới endpoint "categories", tự động giải tuần tự hóa chuỗi JSON thành List<CategoryDto>
-                var categories = await client.GetFromJsonAsync<List<CategoryDto>>("categories");
-                dgvCategories.DataSource = categories; // Gán nguồn dữ liệu cho bảng hiển thị
+                var categories = JsonSerializer.Deserialize<List<CategoryModel>>(
+                    jsonResult,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                dgvCategory.DataSource = categories ?? new List<CategoryModel>();
+
+                if (dgvCategory.Columns["CategoryId"] != null)
+                    dgvCategory.Columns["CategoryId"]!.HeaderText = "Mã danh mục";
+
+                if (dgvCategory.Columns["CategoryName"] != null)
+                    dgvCategory.Columns["CategoryName"]!.HeaderText = "Tên danh mục";
+
+                if (dgvCategory.Columns["Description"] != null)
+                    dgvCategory.Columns["Description"]!.HeaderText = "Mô tả";
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi kết nối Server: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(
+                    "Không thể tải danh mục: " + ex.Message,
+                    "Lỗi",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
         }
 
-        // Nút Tải lại dữ liệu (Refresh)
-        private async void btnLoad_Click(object sender, EventArgs e)
+        private void DgvCategory_SelectionChanged(object? sender, EventArgs e)
         {
-            await LoadDataAsync();
+            if (dgvCategory.SelectedRows.Count == 0)
+                return;
+
+            var row = dgvCategory.SelectedRows[0];
+
+            txtCategoryName.Text = row.Cells["CategoryName"].Value?.ToString() ?? string.Empty;
+            txtDescription.Text = row.Cells["Description"].Value?.ToString() ?? string.Empty;
         }
 
-        // Sự kiện khi click vào một dòng trên DataGridView: Đưa dữ liệu lên các ô nhập (TextBox) để chuẩn bị Sửa/Xóa
-        private void dgvCategories_CellClick(object sender, DataGridViewCellEventArgs e)
+        private async void BtnAdd_Click(object? sender, EventArgs e)
         {
-            if (e.RowIndex >= 0)
+            if (string.IsNullOrWhiteSpace(txtCategoryName.Text))
             {
-                DataGridViewRow row = dgvCategories.Rows[e.RowIndex];
-                txtId.Text = row.Cells["CategoryId"].Value.ToString();
-                txtCategoryName.Text = row.Cells["CategoryName"].Value.ToString();
-                txtDescription.Text = row.Cells["Description"]?.Value?.ToString() ?? string.Empty;
+                MessageBox.Show("Vui lòng nhập tên danh mục!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
-        }
 
-        // Nút THÊM MỚI (CREATE): Gửi dữ liệu POST lên Web API
-        private async void btnAdd_Click(object sender, EventArgs e)
-        {
             var newCat = new
             {
-                CategoryName = txtCategoryName.Text,
-                Description = txtDescription.Text
+                CategoryName = txtCategoryName.Text.Trim(),
+                Description = txtDescription.Text.Trim()
             };
-
-            // Gửi request POST kèm theo đối tượng dạng JSON
-            using var client = GetAuthenticatedClient();
-            var response = await client.PostAsJsonAsync("categories", newCat);
-
-            if (response.IsSuccessStatusCode)
-            {
-                MessageBox.Show("Thêm mới thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                await LoadDataAsync(); // Tải lại danh sách mới
-                ClearInputs();         // Xóa sạch ô nhập
-            }
-            else
-            {
-                MessageBox.Show("Thêm mới thất bại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-        }
-
-        // Nút CẬP NHẬT (UPDATE): Gửi dữ liệu PUT lên Web API theo ID
-        private async void btnUpdate_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrEmpty(txtId.Text))
-            {
-                MessageBox.Show("Vui lòng chọn nhóm hàng cần sửa!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            int id = int.Parse(txtId.Text);
-            var updateCat = new
-            {
-                CategoryId = id,
-                CategoryName = txtCategoryName.Text,
-                Description = txtDescription.Text
-            };
-
-            // Gửi request PUT kèm ID trên đường dẫn URI
-            using var client = GetAuthenticatedClient();
-            var response = await client.PutAsJsonAsync($"categories/{id}", updateCat);
-
-            if (response.IsSuccessStatusCode)
-            {
-                MessageBox.Show("Cập nhật thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                await LoadDataAsync();
-                ClearInputs();
-            }
-            else
-            {
-                MessageBox.Show("Cập nhật thất bại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-        }
-
-        // Nút XÓA (DELETE): Gửi request DELETE lên Web API theo ID
-        private async void btnDelete_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrEmpty(txtId.Text))
-            {
-                MessageBox.Show("Vui lòng chọn nhóm hàng cần xóa!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            int id = int.Parse(txtId.Text);
-            var confirm = MessageBox.Show($"Bạn có chắc muốn xóa nhóm hàng ID = {id}?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-            if (confirm == DialogResult.Yes)
-            {
-                using var client = GetAuthenticatedClient();
-                var response = await client.DeleteAsync($"categories/{id}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    MessageBox.Show("Xóa thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    await LoadDataAsync();
-                    ClearInputs();
-                }
-                else
-                {
-                    MessageBox.Show("Xóa thất bại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-            }
-        }
-
-        // Nút TÌM KIẾM (SEARCH): Gọi API lọc danh mục theo từ khóa Query String
-        private async void btnSearch_Click(object sender, EventArgs e)
-        {
-            string keyword = textBox1.Text.Trim();
-
-            if (string.IsNullOrEmpty(keyword))
-            {
-                await LoadDataAsync(); // Nếu ô tìm kiếm trống thì tải lại toàn bộ
-                return;
-            }
 
             try
             {
-                using var client = GetAuthenticatedClient();
+                bool success = await ApiClientService.PostDataWithTokenAsync("categories", newCat);
 
-                // Gọi API dạng: GET /api/categories/search?keyword=abc
-                var result = await client.GetFromJsonAsync<List<CategoryDto>>($"categories/search?keyword={keyword}");
-                dgvCategories.DataSource = result;
+                if (success)
+                {
+                    MessageBox.Show("Thêm danh mục thành công!", "Thông báo",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ClearInputs();
+                    LoadCategoryData();
+                }
+                else
+                {
+                    MessageBox.Show("Thêm danh mục thất bại!", "Lỗi",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                MessageBox.Show("Không tìm thấy kết quả phù hợp!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Lỗi khi thêm danh mục: " + ex.Message);
             }
         }
 
-        // Hàm phụ trợ: Xóa trắng các ô nhập liệu sau khi thao tác xong
+        private async void BtnUpdate_Click(object? sender, EventArgs e)
+        {
+            if (dgvCategory.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn danh mục cần cập nhật!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtCategoryName.Text))
+            {
+                MessageBox.Show("Vui lòng nhập tên danh mục!");
+                return;
+            }
+
+            var catId = dgvCategory.SelectedRows[0].Cells["CategoryId"].Value;
+
+            var updatedCat = new
+            {
+                CategoryName = txtCategoryName.Text.Trim(),
+                Description = txtDescription.Text.Trim()
+            };
+
+            try
+            {
+                bool success = await ApiClientService.PutDataWithTokenAsync(
+                    $"categories/{catId}", updatedCat);
+
+                if (success)
+                {
+                    MessageBox.Show("Cập nhật thành công!", "Thông báo",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    LoadCategoryData();
+                }
+                else
+                {
+                    MessageBox.Show("Cập nhật thất bại!", "Lỗi",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi cập nhật danh mục: " + ex.Message);
+            }
+        }
+
+        private async void BtnDelete_Click(object? sender, EventArgs e)
+        {
+            if (dgvCategory.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn danh mục cần xóa!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var catId = dgvCategory.SelectedRows[0].Cells["CategoryId"].Value;
+
+            DialogResult confirm = MessageBox.Show(
+                "Bạn có chắc chắn muốn xóa danh mục này?",
+                "Xác nhận xóa",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (confirm != DialogResult.Yes)
+                return;
+
+            try
+            {
+                // Dùng hàm hiện có của ApiClientService để tránh phụ thuộc kiểu trả về.
+                bool success = await ApiClientService.DeleteDataWithTokenAsync(
+                    $"categories/{catId}");
+
+                if (success)
+                {
+                    MessageBox.Show("Xóa danh mục thành công!", "Thông báo",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ClearInputs();
+                    LoadCategoryData();
+                }
+                else
+                {
+                    // ApiClientService hiện chỉ trả về true/false,
+                    // nên không thể biết chính xác API trả về mã 400 hay lỗi khác.
+                    MessageBox.Show(
+                        "Không thể xóa danh mục vì vẫn còn sản phẩm!",
+                        "Thông báo",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi xóa danh mục: " + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnRefresh_Click(object? sender, EventArgs e)
+        {
+            ClearInputs();
+            LoadCategoryData();
+        }
+
         private void ClearInputs()
         {
-            txtId.Text = "";
-            txtCategoryName.Text = "";
-            txtDescription.Text = "";
+            txtCategoryName.Clear();
+            txtDescription.Clear();
+        }
+
+        private void FormCategoryManagement_Load(object sender, EventArgs e)
+        {
         }
     }
 
-    // Lớp DTO trung gian tại Client hứng dữ liệu JSON trả về từ Server
-    public class CategoryDto
+    public class CategoryModel
     {
         public int CategoryId { get; set; }
         public string CategoryName { get; set; } = string.Empty;
-        public string? Description { get; set; }
+        public string Description { get; set; } = string.Empty;
     }
 }

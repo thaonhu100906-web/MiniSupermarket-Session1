@@ -1,9 +1,14 @@
-﻿using System;
+﻿
+// Họ tên: Trần Thị Thảo Như
+// MSSV: 2124110075
+// Lớp: CCQ2411C
+// Môn: lập trình ứng dụng
+
+using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
+using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -11,342 +16,668 @@ namespace MiniSupermarket.WinForms
 {
     public partial class FormProductManagement : Form
     {
-        // Khai báo các control giao diện bằng code thuần
-        private DataGridView dgvProducts = null!;
-        private TextBox txtId = null!;
+        private DataGridView dgvProduct = null!;
         private TextBox txtBarcode = null!;
-        private TextBox txtProductName = null!;
-        private NumericUpDown nudPrice = null!;
-        private NumericUpDown nudStock = null!;
-        private ComboBox cboCategory = null!;
+        private TextBox txtName = null!;
+        private TextBox txtPrice = null!;
+        private TextBox txtStock = null!;
+        private ComboBox cmbCategory = null!;
         private TextBox txtSearch = null!;
         private Button btnAdd = null!;
         private Button btnUpdate = null!;
         private Button btnDelete = null!;
-        private Button btnLoad = null!;
+        private Button btnRefresh = null!;
         private Button btnSearch = null!;
+        private Panel tablePanel = null!;
+        private Panel detailPanel = null!;
+
+        private bool isLoading = false;
 
         public FormProductManagement()
         {
             InitializeComponent();
-            InitializeCustomComponents(); // Hàm tự động khởi tạo giao diện
+            InitializeCustomLayout();
+
+            Load += FormProductManagement_Load;
+            Resize += FormProductManagement_Resize;
         }
 
-        // Hàm tự động sắp xếp các control trên form
-        private void InitializeCustomComponents()
-        {
-            this.Text = "QUẢN LÝ SẢN PHẨM & KHO HÀNG";
-            this.Size = new Size(1100, 650);
-            this.BackColor = Color.FromArgb(244, 245, 247);
-
-            // Thanh tìm kiếm phía trên bảng
-            txtSearch = new TextBox { Location = new Point(20, 25), Size = new Size(510, 25) };
-            this.Controls.Add(txtSearch);
-
-            btnSearch = new Button { Text = "Tìm kiếm", Location = new Point(540, 23), Size = new Size(120, 30), BackColor = Color.FromArgb(0, 123, 255), ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
-            btnSearch.Click += btnSearch_Click;
-            this.Controls.Add(btnSearch);
-
-            // 1. DataGridView hiển thị danh sách sản phẩm (bên trái)
-            dgvProducts = new DataGridView
-            {
-                Location = new Point(20, 65),
-                Size = new Size(640, 520),
-                AutoGenerateColumns = true,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                ReadOnly = true
-            };
-            dgvProducts.CellClick += dgvProducts_CellClick;
-            this.Controls.Add(dgvProducts);
-
-            int startX = 680;
-            int startY = 25;
-            int spacing = 45;
-
-            // 2. Các ô nhập liệu thông tin sản phẩm (bên phải)
-            this.Controls.Add(new Label { Text = "Mã SP (ID):", Location = new Point(startX, startY), AutoSize = true });
-            txtId = new TextBox { Location = new Point(startX + 120, startY), Size = new Size(240, 25), ReadOnly = true };
-            this.Controls.Add(txtId);
-
-            startY += spacing;
-            this.Controls.Add(new Label { Text = "Mã vạch (Barcode):", Location = new Point(startX, startY), AutoSize = true });
-            txtBarcode = new TextBox { Location = new Point(startX + 120, startY), Size = new Size(240, 25) };
-            this.Controls.Add(txtBarcode);
-
-            startY += spacing;
-            this.Controls.Add(new Label { Text = "Tên sản phẩm:", Location = new Point(startX, startY), AutoSize = true });
-            txtProductName = new TextBox { Location = new Point(startX + 120, startY), Size = new Size(240, 25) };
-            this.Controls.Add(txtProductName);
-
-            startY += spacing;
-            this.Controls.Add(new Label { Text = "Đơn giá:", Location = new Point(startX, startY), AutoSize = true });
-            nudPrice = new NumericUpDown { Location = new Point(startX + 120, startY), Size = new Size(240, 25), Maximum = 1000000000, DecimalPlaces = 2 };
-            this.Controls.Add(nudPrice);
-
-            startY += spacing;
-            this.Controls.Add(new Label { Text = "Số lượng tồn:", Location = new Point(startX, startY), AutoSize = true });
-            nudStock = new NumericUpDown { Location = new Point(startX + 120, startY), Size = new Size(240, 25), Maximum = 100000 };
-            this.Controls.Add(nudStock);
-
-            startY += spacing;
-            this.Controls.Add(new Label { Text = "Danh mục:", Location = new Point(startX, startY), AutoSize = true });
-            cboCategory = new ComboBox { Location = new Point(startX + 120, startY), Size = new Size(240, 25), DropDownStyle = ComboBoxStyle.DropDownList };
-            this.Controls.Add(cboCategory);
-
-            // 3. Các nút Thêm, Sửa, Xóa, Tải lại
-            startY += spacing + 25;
-            btnAdd = new Button { Text = "Thêm mới", Location = new Point(startX, startY), Size = new Size(115, 38), BackColor = Color.FromArgb(40, 167, 69), ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
-            btnAdd.Click += btnAdd_Click;
-            this.Controls.Add(btnAdd);
-
-            btnUpdate = new Button { Text = "Cập nhật", Location = new Point(startX + 125, startY), Size = new Size(115, 38), BackColor = Color.FromArgb(23, 162, 184), ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
-            btnUpdate.Click += btnUpdate_Click;
-            this.Controls.Add(btnUpdate);
-
-            startY += 48;
-            btnDelete = new Button { Text = "Xóa", Location = new Point(startX, startY), Size = new Size(115, 38), BackColor = Color.FromArgb(220, 53, 69), ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
-            btnDelete.Click += btnDelete_Click;
-            this.Controls.Add(btnDelete);
-
-            btnLoad = new Button { Text = "Tải lại", Location = new Point(startX + 125, startY), Size = new Size(115, 38), BackColor = Color.FromArgb(108, 117, 125), ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
-            btnLoad.Click += btnLoad_Click;
-            this.Controls.Add(btnLoad);
-        }
-
-        // Cấu hình HttpClient gắn kèm Token bảo mật chuẩn dự án
-        private HttpClient GetAuthenticatedClient()
-        {
-            var client = new HttpClient
-            {
-                BaseAddress = new Uri("https://localhost:7005/api/")
-            };
-
-            if (!string.IsNullOrEmpty(SessionManager.JwtToken))
-            {
-                client.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", SessionManager.JwtToken);
-            }
-
-            return client;
-        }
-
-        // Sự kiện khi Load Form: Tải danh mục vào ComboBox và tải danh sách sản phẩm lên bảng
         private async void FormProductManagement_Load(object? sender, EventArgs e)
         {
-            await LoadCategoriesAsync();
-            await LoadProductsAsync();
+            await LoadCategoryData();
+            await LoadProductData();
         }
 
-        private async Task LoadCategoriesAsync()
+        private void InitializeCustomLayout()
+        {
+            Text = "Quản lý sản phẩm";
+            FormBorderStyle = FormBorderStyle.None;
+            Dock = DockStyle.Fill;
+            BackColor = Color.FromArgb(244, 246, 248);
+            AutoScroll = true;
+
+            var title = new Label
+            {
+                Text = "Quản lý sản phẩm",
+                Font = new Font("Segoe UI", 20, FontStyle.Bold),
+                ForeColor = Color.FromArgb(33, 37, 41),
+                Location = new Point(25, 15),
+                AutoSize = true
+            };
+            Controls.Add(title);
+
+            var subtitle = new Label
+            {
+                Text = "Quản lý sản phẩm, giá bán, tồn kho và danh mục",
+                Font = new Font("Segoe UI", 10),
+                ForeColor = Color.FromArgb(108, 117, 125),
+                Location = new Point(27, 53),
+                AutoSize = true
+            };
+            Controls.Add(subtitle);
+
+            txtSearch = new TextBox
+            {
+                Location = new Point(25, 78),
+                Size = new Size(250, 30),
+                Font = new Font("Segoe UI", 10),
+                PlaceholderText = "Nhập tên hoặc mã vạch..."
+            };
+            Controls.Add(txtSearch);
+
+            btnSearch = CreateButton(
+                "Tìm kiếm", 285, 76, 105, 32,
+                Color.FromArgb(52, 120, 180));
+            btnSearch.Click += BtnSearch_Click;
+            Controls.Add(btnSearch);
+
+            tablePanel = new Panel
+            {
+                Location = new Point(25, 120),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            Controls.Add(tablePanel);
+
+            dgvProduct = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                ReadOnly = true,
+                MultiSelect = false,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                RowHeadersVisible = false,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
+                AutoGenerateColumns = true,
+                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None,
+                RowTemplate = { Height = 32 },
+                EnableHeadersVisualStyles = false
+            };
+
+            dgvProduct.ColumnHeadersDefaultCellStyle.BackColor =
+                Color.FromArgb(35, 75, 95);
+            dgvProduct.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvProduct.ColumnHeadersDefaultCellStyle.Font =
+                new Font("Segoe UI", 9, FontStyle.Bold);
+            dgvProduct.DefaultCellStyle.Font = new Font("Segoe UI", 9);
+            dgvProduct.DefaultCellStyle.SelectionBackColor =
+                Color.FromArgb(210, 235, 245);
+            dgvProduct.DefaultCellStyle.SelectionForeColor = Color.Black;
+            dgvProduct.SelectionChanged += DgvProduct_SelectionChanged;
+
+            tablePanel.Padding = new Padding(8);
+            tablePanel.Controls.Add(dgvProduct);
+
+            detailPanel = new Panel
+            {
+                Location = new Point(25, 500),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            Controls.Add(detailPanel);
+
+            var detailTitle = new Label
+            {
+                Text = "Thông tin sản phẩm",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(33, 37, 41),
+                Location = new Point(18, 12),
+                AutoSize = true
+            };
+            detailPanel.Controls.Add(detailTitle);
+
+            CreateLabel(detailPanel, "Mã vạch", 18, 48);
+            txtBarcode = CreateTextBox(detailPanel, 18, 70);
+
+            CreateLabel(detailPanel, "Tên sản phẩm", 18, 105);
+            txtName = CreateTextBox(detailPanel, 18, 127);
+
+            CreateLabel(detailPanel, "Đơn giá", 18, 162);
+            txtPrice = CreateTextBox(detailPanel, 18, 184);
+
+            CreateLabel(detailPanel, "Tồn kho", 18, 219);
+            txtStock = CreateTextBox(detailPanel, 18, 241);
+
+            CreateLabel(detailPanel, "Danh mục", 18, 276);
+
+            cmbCategory = new ComboBox
+            {
+                Location = new Point(18, 298),
+                Size = new Size(280, 28),
+                Font = new Font("Segoe UI", 10),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left |
+                         AnchorStyles.Right,
+                DisplayMember = "CategoryName",
+                ValueMember = "CategoryId"
+            };
+            detailPanel.Controls.Add(cmbCategory);
+
+            btnAdd = CreateButton(
+                "Thêm mới", 18, 340, 130, 36,
+                Color.FromArgb(40, 167, 69));
+            btnAdd.Click += BtnAdd_Click;
+            detailPanel.Controls.Add(btnAdd);
+
+            btnUpdate = CreateButton(
+                "Cập nhật", 158, 340, 130, 36,
+                Color.FromArgb(23, 162, 184));
+            btnUpdate.Click += BtnUpdate_Click;
+            detailPanel.Controls.Add(btnUpdate);
+
+            btnDelete = CreateButton(
+                "Xóa", 18, 385, 130, 36,
+                Color.FromArgb(220, 53, 69));
+            btnDelete.Click += BtnDelete_Click;
+            detailPanel.Controls.Add(btnDelete);
+
+            btnRefresh = CreateButton(
+                "Làm mới", 158, 385, 130, 36,
+                Color.FromArgb(108, 117, 125));
+            btnRefresh.Click += BtnRefresh_Click;
+            detailPanel.Controls.Add(btnRefresh);
+
+            FormProductManagement_Resize(this, EventArgs.Empty);
+        }
+
+        private void FormProductManagement_Resize(object? sender, EventArgs e)
+        {
+            if (tablePanel == null || detailPanel == null)
+                return;
+
+            int width = ClientSize.Width - 50;
+            int height = ClientSize.Height - 145;
+
+            if (width < 300 || height < 200)
+                return;
+
+            if (width >= 1000)
+            {
+                int detailWidth = Math.Min(340, width / 3);
+                int gap = 15;
+                int tableWidth = width - detailWidth - gap;
+
+                tablePanel.Location = new Point(25, 120);
+                tablePanel.Size = new Size(tableWidth, Math.Max(250, height));
+
+                detailPanel.Location =
+                    new Point(25 + tableWidth + gap, 120);
+                detailPanel.Size =
+                    new Size(detailWidth, Math.Max(435, height));
+
+                SetDetailControlWidths(detailWidth);
+                AutoScrollMinSize = Size.Empty;
+            }
+            else
+            {
+                tablePanel.Location = new Point(25, 120);
+                tablePanel.Size = new Size(width, 300);
+
+                detailPanel.Location = new Point(25, 435);
+                detailPanel.Size = new Size(width, 440);
+
+                SetDetailControlWidths(width);
+                AutoScrollMinSize = new Size(0, 890);
+            }
+        }
+
+        private void SetDetailControlWidths(int panelWidth)
+        {
+            int inputWidth = Math.Max(150, panelWidth - 45);
+
+            txtBarcode.Width = inputWidth;
+            txtName.Width = inputWidth;
+            txtPrice.Width = inputWidth;
+            txtStock.Width = inputWidth;
+            cmbCategory.Width = inputWidth;
+
+            int buttonWidth = Math.Max(100, (panelWidth - 55) / 2);
+
+            btnAdd.Width = buttonWidth;
+            btnUpdate.Width = buttonWidth;
+            btnDelete.Width = buttonWidth;
+            btnRefresh.Width = buttonWidth;
+
+            btnAdd.Location = new Point(18, 340);
+            btnUpdate.Location = new Point(28 + buttonWidth, 340);
+            btnDelete.Location = new Point(18, 385);
+            btnRefresh.Location = new Point(28 + buttonWidth, 385);
+        }
+
+        private Label CreateLabel(Control parent, string text, int x, int y)
+        {
+            var label = new Label
+            {
+                Text = text,
+                Location = new Point(x, y),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.FromArgb(73, 80, 87)
+            };
+
+            parent.Controls.Add(label);
+            return label;
+        }
+
+        private TextBox CreateTextBox(Control parent, int x, int y)
+        {
+            var textBox = new TextBox
+            {
+                Location = new Point(x, y),
+                Size = new Size(280, 27),
+                Font = new Font("Segoe UI", 10),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left |
+                         AnchorStyles.Right
+            };
+
+            parent.Controls.Add(textBox);
+            return textBox;
+        }
+
+        private Button CreateButton(
+            string text, int x, int y, int width, int height, Color color)
+        {
+            return new Button
+            {
+                Text = text,
+                Location = new Point(x, y),
+                Size = new Size(width, height),
+                BackColor = color,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                UseVisualStyleBackColor = false
+            };
+        }
+
+        private async Task LoadCategoryData()
         {
             try
             {
-                using var client = GetAuthenticatedClient();
-                var categories = await client.GetFromJsonAsync<List<CategoryDto>>("categories");
-                cboCategory.DataSource = categories;
-                cboCategory.DisplayMember = "CategoryName";
-                cboCategory.ValueMember = "CategoryId";
+                string json = await ApiClientService.GetDataWithTokenAsync(
+                    "categories");
+
+                var categories =
+                    JsonSerializer.Deserialize<List<CategoryModel>>(
+                        json,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        }) ?? new List<CategoryModel>();
+
+                cmbCategory.DataSource = categories;
+                cmbCategory.DisplayMember = "CategoryName";
+                cmbCategory.ValueMember = "CategoryId";
+                cmbCategory.SelectedIndex = -1;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi tải danh mục: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(
+                    "Không tải được danh mục: " + ex.Message,
+                    "Lỗi",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
         }
 
-        private async Task LoadProductsAsync()
+        private async Task LoadProductData()
         {
             try
             {
-                using var client = GetAuthenticatedClient();
-                var products = await client.GetFromJsonAsync<List<ProductDto>>("products");
-                dgvProducts.DataSource = products;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi tải danh sách sản phẩm: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
+                isLoading = true;
 
-        private async void btnLoad_Click(object? sender, EventArgs e)
-        {
-            txtSearch.Clear();
-            await LoadProductsAsync();
-        }
+                string json = await ApiClientService.GetDataWithTokenAsync(
+                    "products");
 
-        // Click chọn một dòng trên bảng để đưa dữ liệu lên các ô nhập
-        private void dgvProducts_CellClick(object? sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex >= 0)
-            {
-                DataGridViewRow row = dgvProducts.Rows[e.RowIndex];
-                txtId.Text = row.Cells["ProductId"].Value?.ToString() ?? string.Empty;
-                txtBarcode.Text = row.Cells["Barcode"].Value?.ToString() ?? string.Empty;
-                txtProductName.Text = row.Cells["ProductName"].Value?.ToString() ?? string.Empty;
-                nudPrice.Value = Convert.ToDecimal(row.Cells["Price"].Value ?? 0);
-                nudStock.Value = Convert.ToInt32(row.Cells["StockQuantity"].Value ?? 0);
+                var products =
+                    JsonSerializer.Deserialize<List<ProductModel>>(
+                        json,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        }) ?? new List<ProductModel>();
 
-                if (row.Cells["CategoryId"].Value != null)
+                dgvProduct.DataSource = products;
+
+                SetColumnHeader("ProductId", "Mã SP");
+                SetColumnHeader("Barcode", "Mã vạch");
+                SetColumnHeader("ProductName", "Tên sản phẩm");
+                SetColumnHeader("Price", "Đơn giá");
+                SetColumnHeader("StockQuantity", "Tồn kho");
+                SetColumnHeader("CategoryId", "Mã danh mục");
+                SetColumnHeader("Category", "Danh mục");
+
+                if (dgvProduct.Columns["Price"] != null)
                 {
-                    cboCategory.SelectedValue = Convert.ToInt32(row.Cells["CategoryId"].Value);
+                    dgvProduct.Columns["Price"]!.DefaultCellStyle.Format = "N0";
+                }
+
+                if (dgvProduct.Columns["Category"] != null)
+                {
+                    dgvProduct.Columns["Category"]!.Visible = false;
                 }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Không thể tải danh sách sản phẩm: " + ex.Message,
+                    "Lỗi",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+            finally
+            {
+                isLoading = false;
+            }
         }
 
-        // Thêm mới sản phẩm (POST)
-        private async void btnAdd_Click(object? sender, EventArgs e)
+        private void SetColumnHeader(string columnName, string header)
         {
-            if (string.IsNullOrWhiteSpace(txtProductName.Text))
-            {
-                MessageBox.Show("Vui lòng nhập tên sản phẩm!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (dgvProduct.Columns[columnName] != null)
+                dgvProduct.Columns[columnName]!.HeaderText = header;
+        }
+
+        private void DgvProduct_SelectionChanged(object? sender, EventArgs e)
+        {
+            if (isLoading || dgvProduct.SelectedRows.Count == 0)
                 return;
+
+            var row = dgvProduct.SelectedRows[0];
+
+            txtBarcode.Text =
+                row.Cells["Barcode"]?.Value?.ToString() ?? string.Empty;
+
+            txtName.Text =
+                row.Cells["ProductName"]?.Value?.ToString() ?? string.Empty;
+
+            txtPrice.Text =
+                row.Cells["Price"]?.Value?.ToString() ?? string.Empty;
+
+            txtStock.Text =
+                row.Cells["StockQuantity"]?.Value?.ToString() ?? string.Empty;
+
+            object? categoryId = row.Cells["CategoryId"]?.Value;
+
+            if (categoryId != null && int.TryParse(categoryId.ToString(), out int id))
+                cmbCategory.SelectedValue = id;
+            else
+                cmbCategory.SelectedIndex = -1;
+        }
+
+        private bool ValidateInputs(
+            out decimal price, out int stock, out int categoryId)
+        {
+            price = 0;
+            stock = 0;
+            categoryId = 0;
+
+            if (string.IsNullOrWhiteSpace(txtBarcode.Text))
+            {
+                MessageBox.Show("Vui lòng nhập mã vạch sản phẩm!");
+                txtBarcode.Focus();
+                return false;
             }
 
-            var newProd = new
+            if (string.IsNullOrWhiteSpace(txtName.Text))
+            {
+                MessageBox.Show("Vui lòng nhập tên sản phẩm!");
+                txtName.Focus();
+                return false;
+            }
+
+            if (!decimal.TryParse(txtPrice.Text.Trim(), out price) || price < 0)
+            {
+                MessageBox.Show("Đơn giá phải là số không âm!");
+                txtPrice.Focus();
+                return false;
+            }
+
+            if (!int.TryParse(txtStock.Text.Trim(), out stock) || stock < 0)
+            {
+                MessageBox.Show("Tồn kho phải là số nguyên không âm!");
+                txtStock.Focus();
+                return false;
+            }
+
+            if (cmbCategory.SelectedValue == null ||
+                !int.TryParse(cmbCategory.SelectedValue.ToString(), out categoryId))
+            {
+                MessageBox.Show("Vui lòng chọn danh mục sản phẩm!");
+                cmbCategory.Focus();
+                return false;
+            }
+
+            return true;
+        }
+
+        private async void BtnAdd_Click(object? sender, EventArgs e)
+        {
+            if (!ValidateInputs(out decimal price, out int stock, out int categoryId))
+                return;
+
+            var newProduct = new
             {
                 Barcode = txtBarcode.Text.Trim(),
-                ProductName = txtProductName.Text.Trim(),
-                Price = nudPrice.Value,
-                StockQuantity = (int)nudStock.Value,
-                CategoryId = cboCategory.SelectedValue != null ? (int)cboCategory.SelectedValue : 0
+                ProductName = txtName.Text.Trim(),
+                Price = price,
+                StockQuantity = stock,
+                CategoryId = categoryId
             };
 
             try
             {
-                using var client = GetAuthenticatedClient();
-                var response = await client.PostAsJsonAsync("products", newProd);
+                bool success = await ApiClientService.PostDataWithTokenAsync(
+                    "products", newProduct);
 
-                if (response.IsSuccessStatusCode)
+                if (success)
                 {
-                    MessageBox.Show("Thêm mới sản phẩm thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    await LoadProductsAsync();
+                    MessageBox.Show("Thêm sản phẩm thành công!");
                     ClearInputs();
+                    await LoadProductData();
                 }
                 else
                 {
-                    MessageBox.Show("Thêm mới thất bại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(
+                        "Thêm thất bại. Kiểm tra mã vạch, danh mục và quyền truy cập.");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Lỗi khi thêm sản phẩm: " + ex.Message);
             }
         }
 
-        // Cập nhật sản phẩm (PUT)
-        private async void btnUpdate_Click(object? sender, EventArgs e)
+        private async void BtnUpdate_Click(object? sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(txtId.Text))
+            if (dgvProduct.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Vui lòng chọn sản phẩm cần sửa trên bảng!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng chọn sản phẩm cần cập nhật!");
                 return;
             }
 
-            int id = int.Parse(txtId.Text);
-            var updateProd = new
+            if (!ValidateInputs(out decimal price, out int stock, out int categoryId))
+                return;
+
+            object? id = dgvProduct.SelectedRows[0].Cells["ProductId"]?.Value;
+
+            if (id == null)
             {
-                ProductId = id,
+                MessageBox.Show("Không lấy được mã sản phẩm!");
+                return;
+            }
+
+            var updatedProduct = new
+            {
                 Barcode = txtBarcode.Text.Trim(),
-                ProductName = txtProductName.Text.Trim(),
-                Price = nudPrice.Value,
-                StockQuantity = (int)nudStock.Value,
-                CategoryId = cboCategory.SelectedValue != null ? (int)cboCategory.SelectedValue : 0
+                ProductName = txtName.Text.Trim(),
+                Price = price,
+                StockQuantity = stock,
+                CategoryId = categoryId
             };
 
             try
             {
-                using var client = GetAuthenticatedClient();
-                var response = await client.PutAsJsonAsync($"products/{id}", updateProd);
+                bool success = await ApiClientService.PutDataWithTokenAsync(
+                    $"products/{id}", updatedProduct);
 
-                if (response.IsSuccessStatusCode)
+                if (success)
                 {
-                    MessageBox.Show("Cập nhật sản phẩm thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    await LoadProductsAsync();
-                    ClearInputs();
+                    MessageBox.Show("Cập nhật sản phẩm thành công!");
+                    await LoadProductData();
                 }
                 else
                 {
-                    MessageBox.Show("Cập nhật thất bại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(
+                        "Cập nhật thất bại. Kiểm tra dữ liệu và quyền truy cập.");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Lỗi khi cập nhật sản phẩm: " + ex.Message);
             }
         }
 
-        // Xóa sản phẩm (DELETE)
-        private async void btnDelete_Click(object? sender, EventArgs e)
+        private async void BtnDelete_Click(object? sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(txtId.Text))
+            if (dgvProduct.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Vui lòng chọn sản phẩm cần xóa!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng chọn sản phẩm cần xóa!");
                 return;
             }
 
-            int id = int.Parse(txtId.Text);
-            var confirm = MessageBox.Show($"Bạn có chắc muốn xóa sản phẩm ID = {id}?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            object? id = dgvProduct.SelectedRows[0].Cells["ProductId"]?.Value;
 
-            if (confirm == DialogResult.Yes)
+            if (id == null)
             {
-                try
-                {
-                    using var client = GetAuthenticatedClient();
-                    var response = await client.DeleteAsync($"products/{id}");
+                MessageBox.Show("Không lấy được mã sản phẩm!");
+                return;
+            }
 
-                    if (response.IsSuccessStatusCode)
-                    {
-                        MessageBox.Show("Đã xóa sản phẩm thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        await LoadProductsAsync();
-                        ClearInputs();
-                    }
-                    else
-                    {
-                        MessageBox.Show("Xóa thất bại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    }
-                }
-                catch (Exception ex)
+            var confirm = MessageBox.Show(
+                "Bạn có chắc chắn muốn xóa sản phẩm này?",
+                "Xác nhận xóa",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (confirm != DialogResult.Yes)
+                return;
+
+            try
+            {
+                bool success = await ApiClientService.DeleteDataWithTokenAsync(
+                    $"products/{id}");
+
+                if (success)
                 {
-                    MessageBox.Show("Lỗi: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Xóa sản phẩm thành công!");
+                    ClearInputs();
+                    await LoadProductData();
                 }
+                else
+                {
+                    MessageBox.Show(
+                        "Xóa thất bại. Sản phẩm có thể đang được tham chiếu bởi dữ liệu khác.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi xóa sản phẩm: " + ex.Message);
             }
         }
 
-        // Tìm kiếm sản phẩm theo từ khóa
-        private async void btnSearch_Click(object? sender, EventArgs e)
+        private async void BtnSearch_Click(object? sender, EventArgs e)
         {
             string keyword = txtSearch.Text.Trim();
-            if (string.IsNullOrEmpty(keyword))
+
+            if (string.IsNullOrWhiteSpace(keyword))
             {
-                await LoadProductsAsync();
+                await LoadProductData();
                 return;
             }
 
             try
             {
-                using var client = GetAuthenticatedClient();
-                var result = await client.GetFromJsonAsync<List<ProductDto>>($"products/search?keyword={keyword}");
-                dgvProducts.DataSource = result;
+                string url = "products/search?keyword=" +
+                    Uri.EscapeDataString(keyword);
+
+                string json = await ApiClientService.GetDataWithTokenAsync(url);
+
+                var products =
+                    JsonSerializer.Deserialize<List<ProductModel>>(
+                        json,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        }) ?? new List<ProductModel>();
+
+                isLoading = true;
+                dgvProduct.DataSource = products;
+
+                SetColumnHeader("ProductId", "Mã SP");
+                SetColumnHeader("Barcode", "Mã vạch");
+                SetColumnHeader("ProductName", "Tên sản phẩm");
+                SetColumnHeader("Price", "Đơn giá");
+                SetColumnHeader("StockQuantity", "Tồn kho");
+                SetColumnHeader("CategoryId", "Mã danh mục");
+
+                if (dgvProduct.Columns["Price"] != null)
+                    dgvProduct.Columns["Price"]!.DefaultCellStyle.Format = "N0";
+
+                MessageBox.Show($"Tìm thấy {products.Count} sản phẩm.");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                MessageBox.Show("Không tìm thấy sản phẩm phù hợp!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Lỗi tìm kiếm: " + ex.Message);
+            }
+            finally
+            {
+                isLoading = false;
             }
         }
 
-        // Xóa trắng các ô nhập liệu
+        private async void BtnRefresh_Click(object? sender, EventArgs e)
+        {
+            txtSearch.Clear();
+            ClearInputs();
+            await LoadProductData();
+        }
+
         private void ClearInputs()
         {
-            txtId.Text = "";
-            txtBarcode.Text = "";
-            txtProductName.Text = "";
-            nudPrice.Value = 0;
-            nudStock.Value = 0;
-            if (cboCategory.Items.Count > 0) cboCategory.SelectedIndex = 0;
+            txtBarcode.Clear();
+            txtName.Clear();
+            txtPrice.Clear();
+            txtStock.Clear();
+            cmbCategory.SelectedIndex = -1;
+            dgvProduct.ClearSelection();
         }
     }
 
-    // Lớp DTO trung gian ánh xạ dữ liệu Sản phẩm
-    public class ProductDto
+    public class ProductModel
     {
         public int ProductId { get; set; }
         public string Barcode { get; set; } = string.Empty;
@@ -354,5 +685,6 @@ namespace MiniSupermarket.WinForms
         public decimal Price { get; set; }
         public int StockQuantity { get; set; }
         public int CategoryId { get; set; }
+        public CategoryModel? Category { get; set; }
     }
 }

@@ -1,12 +1,22 @@
-﻿using System.Net.Http.Json;
+﻿
+/*
+ * Họ tên: Trần Thị Thảo Như
+ * MSSV: 2124110075
+ * Lớp: CCQ2411C
+ * Môn: Lập trình ứng dụng
+ */
+
+using System;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json;
+using System.Drawing;
+using System.Windows.Forms;
 
 namespace MiniSupermarket.WinForms
 {
     public partial class FormLogin : Form
     {
-
-        // Khởi tạo HttpClient trỏ đến địa chỉ của Web API Backend
         private static readonly HttpClient _client = new HttpClient
         {
             BaseAddress = new Uri("https://localhost:7005/api/")
@@ -16,75 +26,224 @@ namespace MiniSupermarket.WinForms
         {
             InitializeComponent();
 
-            // Gán sự kiện Click cho nút Đăng nhập
-            button1.Click += btnLogin_Click;
+            // Thay giao diện cũ bằng giao diện mới
+            BuildLoginUI();
         }
 
-        // Sự kiện khi người dùng bấm nút Đăng nhập
-        private async void btnLogin_Click(object sender, EventArgs e)
+        private void BuildLoginUI()
         {
-            string username = textBox1.Text.Trim();
-            string password = textBox2.Text.Trim();
+            Controls.Clear();
 
-            // Kiểm tra ràng buộc cơ bản phía Client
-            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            Text = "Daily Fresh - Đăng nhập";
+            StartPosition = FormStartPosition.CenterScreen;
+            ClientSize = new Size(850, 500);
+            MinimumSize = new Size(850, 500);
+            BackColor = Color.White;
+
+            // Bên trái
+            Panel leftPanel = new Panel
             {
-                MessageBox.Show("Vui lòng nhập đầy đủ tài khoản và mật khẩu!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+                Location = new Point(0, 0),
+                Size = new Size(390, 500),
+                BackColor = Color.FromArgb(35, 115, 75)
+            };
 
-            try
+            Label lblBrand = new Label
             {
-                // Đóng gói dữ liệu gửi lên endpoint POST /api/auth/login
-                var loginData = new { Username = username, Password = password };
-                var response = await _client.PostAsJsonAsync("auth/login", loginData);
+                Text = "DAILY FRESH",
+                Font = new Font("Arial", 25, FontStyle.Bold),
+                ForeColor = Color.White,
+                AutoSize = true,
+                Location = new Point(65, 150)
+            };
 
-                if (response.IsSuccessStatusCode)
+            Label lblSlogan = new Label
+            {
+                Text = "Siêu thị tiện lợi\nMua sắm mỗi ngày",
+                Font = new Font("Arial", 15),
+                ForeColor = Color.White,
+                AutoSize = true,
+                Location = new Point(68, 210)
+            };
+
+            leftPanel.Controls.Add(lblBrand);
+            leftPanel.Controls.Add(lblSlogan);
+
+            // Bên phải
+            Label lblTitle = new Label
+            {
+                Text = "ĐĂNG NHẬP",
+                Font = new Font("Arial", 23, FontStyle.Bold),
+                ForeColor = Color.FromArgb(35, 115, 75),
+                AutoSize = true,
+                Location = new Point(490, 75)
+            };
+
+            Label lblUsername = new Label
+            {
+                Text = "Tài khoản",
+                Font = new Font("Arial", 11),
+                AutoSize = true,
+                Location = new Point(465, 155)
+            };
+
+            TextBox txtUsername = new TextBox
+            {
+                Name = "txtUsername",
+                Font = new Font("Arial", 12),
+                Location = new Point(465, 185),
+                Size = new Size(310, 35)
+            };
+
+            Label lblPassword = new Label
+            {
+                Text = "Mật khẩu",
+                Font = new Font("Arial", 11),
+                AutoSize = true,
+                Location = new Point(465, 235)
+            };
+
+            TextBox txtPassword = new TextBox
+            {
+                Name = "txtPassword",
+                Font = new Font("Arial", 12),
+                Location = new Point(465, 265),
+                Size = new Size(310, 35),
+                UseSystemPasswordChar = true
+            };
+
+            Button btnLogin = new Button
+            {
+                Text = "ĐĂNG NHẬP",
+                Font = new Font("Arial", 12, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(35, 115, 75),
+                FlatStyle = FlatStyle.Flat,
+                Location = new Point(465, 330),
+                Size = new Size(310, 45),
+                Cursor = Cursors.Hand
+            };
+
+            Label lblStatus = new Label
+            {
+                Name = "lblStatus",
+                Text = "",
+                ForeColor = Color.Red,
+                Font = new Font("Arial", 9),
+                AutoSize = true,
+                Location = new Point(465, 390)
+            };
+
+            btnLogin.Click += async (sender, e) =>
+            {
+                string username = txtUsername.Text.Trim();
+                string password = txtPassword.Text.Trim();
+
+                if (string.IsNullOrWhiteSpace(username) ||
+                    string.IsNullOrWhiteSpace(password))
                 {
-                    // Đọc chuỗi JSON trả về từ Server khi đăng nhập thành công
-                    var jsonString = await response.Content.ReadAsStringAsync();
-                    using var doc = JsonDocument.Parse(jsonString);
-
-                    // Trích xuất Token và Role lưu vào lớp tĩnh SessionManager dùng chung toàn ứng dụng
-                    SessionManager.JwtToken = doc.RootElement.GetProperty("token").GetString() ?? string.Empty;
-                    SessionManager.CurrentRole = doc.RootElement.GetProperty("role").GetString() ?? string.Empty;
-
-                    MessageBox.Show($"Đăng nhập thành công với quyền: {SessionManager.CurrentRole}", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                    // Mở Form quản lý chính (FormCategoryManagement) và ẩn Form đăng nhập đi
-                    FormCategoryManagement mainForm = new FormCategoryManagement();
-                    this.Hide();
-                    mainForm.ShowDialog();
-                    this.Close(); // Đóng hẳn ứng dụng khi form chính tắt
+                    lblStatus.Text = "Vui lòng nhập tài khoản và mật khẩu!";
+                    return;
                 }
-                else
+
+                btnLogin.Enabled = false;
+                lblStatus.ForeColor = Color.DarkBlue;
+                lblStatus.Text = "Đang đăng nhập...";
+
+                try
                 {
-                    MessageBox.Show("Sai tài khoản hoặc mật khẩu!", "Đăng nhập thất bại", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    var loginData = new
+                    {
+                        Username = username,
+                        Password = password
+                    };
+
+                    using HttpResponseMessage response =
+                        await _client.PostAsJsonAsync("auth/login", loginData);
+
+                    string responseText =
+                        await response.Content.ReadAsStringAsync();
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        lblStatus.ForeColor = Color.Red;
+                        lblStatus.Text = "Sai tài khoản, mật khẩu hoặc lỗi máy chủ.";
+                        return;
+                    }
+
+                    using JsonDocument doc = JsonDocument.Parse(responseText);
+
+                    if (!doc.RootElement.TryGetProperty("token", out JsonElement tokenElement))
+                    {
+                        lblStatus.ForeColor = Color.Red;
+                        lblStatus.Text = "Phản hồi đăng nhập không có token.";
+                        return;
+                    }
+
+                    SessionManager.JwtToken =
+                        tokenElement.GetString() ?? string.Empty;
+
+                    if (doc.RootElement.TryGetProperty("role", out JsonElement roleElement))
+                    {
+                        SessionManager.CurrentRole =
+                            roleElement.GetString() ?? string.Empty;
+                    }
+
+                    SessionManager.CurrentUsername = username;
+
+                    Hide();
+
+                    using (FormMainShell mainForm = new FormMainShell())
+                    {
+                        mainForm.ShowDialog();
+                    }
+
+                    Close();
                 }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi kết nối đến Server: " + ex.Message, "Lỗi hệ thống", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+                catch (Exception ex)
+                {
+                    lblStatus.ForeColor = Color.Red;
+                    lblStatus.Text = "Không kết nối được máy chủ.";
+
+                    MessageBox.Show(
+                        ex.Message,
+                        "Lỗi đăng nhập",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    if (!IsDisposed && Visible)
+                    {
+                        btnLogin.Enabled = true;
+                    }
+                }
+            };
+
+            Controls.Add(leftPanel);
+            Controls.Add(lblTitle);
+            Controls.Add(lblUsername);
+            Controls.Add(txtUsername);
+            Controls.Add(lblPassword);
+            Controls.Add(txtPassword);
+            Controls.Add(btnLogin);
+            Controls.Add(lblStatus);
         }
 
-        // Sự kiện khi nội dung ô tài khoản thay đổi
+        // Giữ các hàm sự kiện mà Designer cũ đang tham chiếu
+        private void FormLogin_Load(object sender, EventArgs e)
+        {
+        }
+
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
         }
 
-        // Sự kiện khi click vào Label tài khoản
         private void label1_Click(object sender, EventArgs e)
         {
         }
 
-        // Sự kiện khi GroupBox đăng nhập được kích hoạt
         private void groupBox1_Enter(object sender, EventArgs e)
-        {
-        }
-
-        // Sự kiện FormLogin vừa bật lên
-        private void FormLogin_Load(object sender, EventArgs e)
         {
         }
     }
