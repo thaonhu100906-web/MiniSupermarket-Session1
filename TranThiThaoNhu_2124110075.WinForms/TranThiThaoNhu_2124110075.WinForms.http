@@ -1,0 +1,6 @@
+@TranThiThaoNhu_2124110075.WinForms_HostAddress = http://localhost:5289
+
+GET {{TranThiThaoNhu_2124110075.WinForms_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

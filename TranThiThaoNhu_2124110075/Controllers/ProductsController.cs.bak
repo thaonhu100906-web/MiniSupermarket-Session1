@@ -1,0 +1,155 @@
+﻿//họ tên: Trần Thị Thảo Như
+//Mssv: 2124110075
+//Lớp: CCQ2411C
+//Môn: lập trình ứng dụng
+
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using TranThiThaoNhu_2124110075.API.Data;
+using TranThiThaoNhu_2124110075.API.Models;
+
+namespace TranThiThaoNhu_2124110075.API.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class ProductsController : ControllerBase
+    {
+        private readonly SupermarketDbContext _context;
+
+        public ProductsController(SupermarketDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var list = await _context.Products.Include(p => p.Category).AsNoTracking().ToListAsync();
+            return Ok(list);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var product = await _context.Products.Include(p => p.Category).FirstOrDefaultAsync(p => p.ProductId == id);
+            if (product == null)
+            {
+                return NotFound(new { message = "Không tìm thấy sản phẩm trong CSDL!" });
+            }
+            return Ok(product);
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> Search([FromQuery] string keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return BadRequest(new { message = "Vui lòng nhập từ khóa tìm kiếm!" });
+            }
+
+            var result = await _context.Products
+                .Include(p => p.Category)
+                .Where(p => p.ProductName.Contains(keyword) || p.Barcode.Contains(keyword))
+                .ToListAsync();
+            return Ok(result);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] Product newProduct)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            _context.Products.Add(newProduct);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction(nameof(GetById), new { id = newProduct.ProductId }, newProduct);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] Product updateProduct)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null)
+            {
+                return NotFound(new { message = "Không tìm thấy sản phẩm cần sửa!" });
+            }
+
+            product.Barcode = updateProduct.Barcode;
+            product.ProductName = updateProduct.ProductName;
+            product.Price = updateProduct.Price;
+            product.StockQuantity = updateProduct.StockQuantity;
+            product.CategoryId = updateProduct.CategoryId;
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null)
+            {
+                return NotFound(new { message = "Không tìm thấy sản phẩm cần xóa!" });
+            }
+
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetPaged(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? keyword = null)
+        {
+            if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
+            {
+                return BadRequest(new
+                {
+                    message = "pageNumber phai >= 1 va pageSize phai tu 1 den 100."
+                });
+            }
+
+            var query = _context.Products.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                keyword = keyword.Trim();
+                query = query.Where(p =>
+                    p.ProductName.Contains(keyword) ||
+                    p.Barcode.Contains(keyword));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderBy(p => p.ProductId)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(p => new TranThiThaoNhu_2124110075.API.DTOs.Products.ProductListItemDto
+                {
+                    ProductId = p.ProductId,
+                    Barcode = p.Barcode,
+                    ProductName = p.ProductName,
+                    Price = p.Price,
+                    StockQuantity = p.StockQuantity,
+                    CategoryId = p.CategoryId
+                })
+                .ToListAsync();
+
+            var result = new TranThiThaoNhu_2124110075.API.DTOs.Products.PagedResultDto<TranThiThaoNhu_2124110075.API.DTOs.Products.ProductListItemDto>
+            {
+                Items = items,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            };
+
+            return Ok(result);
+        }
+    }
+}

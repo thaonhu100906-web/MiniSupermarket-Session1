@@ -1,0 +1,36 @@
+﻿//họ tên: Trần Thị Thảo Như
+//Mssv: 2124110075
+//Lớp: CCQ2411C
+//Môn: lập trình ứng dụng
+
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace TranThiThaoNhu_2124110075.API.Models
+{
+    [Table("Customers")]
+    public class Customer
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int CustomerId { get; set; }
+
+        [Required(ErrorMessage = "Tên khách hàng không được để trống!")]
+        [StringLength(100)]
+        public string CustomerName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Số điện thoại không được để trống!")]
+        [StringLength(15)]
+        public string PhoneNumber { get; set; } = string.Empty;
+
+        [StringLength(200)]
+        public string? Address { get; set; }
+
+        [Range(0, int.MaxValue, ErrorMessage = "Điểm tích lũy không được âm.")]
+        public int RewardPoints { get; set; } = 0;
+
+        [Required(ErrorMessage = "Hạng thành viên không được để trống!")]
+        [StringLength(50)]
+        public string MembershipRank { get; set; } = "Chuẩn";
+    }
+}

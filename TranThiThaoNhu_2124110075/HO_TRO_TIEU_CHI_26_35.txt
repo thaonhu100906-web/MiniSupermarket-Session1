@@ -1,0 +1,29 @@
+HUONG DAN CAC PHAN BO SUNG (TIEU CHI 26-35)
+
+1. TEN DANH MUC TREN QUAN LY SAN PHAM
+- API GET api/products/paged tra them CategoryName.
+- WinForms hien cot "Ten danh muc"; CategoryId duoc an tren bang, nhung van duoc giu trong model de cap nhat san pham dung khoa ngoai.
+- ComboBox them/sua san pham hien CategoryName va gui CategoryId ve API.
+
+2. ASNOTRACKING
+- Bo sung AsNoTracking cho cac truy van GET chi doc trong Products, Categories, Customers, Users va Orders o cac vi tri da chinh sua.
+
+3. JWT VA PHAN QUYEN
+- Products, Categories, Customers, Orders va Users yeu cau dang nhap JWT.
+- Quan ly/sua/xoa san pham, danh muc, khach hang va tai khoan: Admin.
+- Checkout: Admin hoac Cashier.
+- Bao cao doanh thu theo ca: Admin.
+- Swagger da co Bearer Authorize. Dang nhap qua POST api/auth/login, sao chep token va bam Authorize, nhap token (khong can tu them chu Bearer neu giao dien da tu them).
+
+4. STORED PROCEDURE DOANH THU THEO CA
+- Mo SQL Server Management Studio, chon dung database TranThiThaoNhuDb.
+- Mo va chay file Scripts/ShiftRevenueReport.sql mot lan.
+- API moi: GET /api/orders/shift-revenue?from=2026-10-24T08:00:00&to=2026-10-24T12:00:00
+- Chi Admin duoc goi endpoint nay. from phai nho hon to. Endpoint tinh so hoa don va tong doanh thu trong khoang [from, to).
+
+5. CAC PHAN DA CO SAN VA GIU NGUYEN
+- JWT login, Swagger Bearer, ADO.NET tim kiem san pham bang Stored Procedure SearchProductsByKeyword, SqlDataReader/SqlParameter, va transaction thanh toan duoc giu lai.
+
+LUU Y
+- Cac thay doi trong ZIP chua duoc build/test trong moi truong nay vi khong co .NET SDK. Sau khi mo bang Visual Studio, Build Solution truoc khi chay.
+- Vi phan quyen duoc ap dung nghiem hon, dang nhap bang tai khoan Admin de quan ly san pham/danh muc/khach hang/tai khoan; dang nhap Cashier de ban hang va doc danh sach san pham/danh muc.
