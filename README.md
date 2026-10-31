@@ -519,6 +519,7 @@ Lưu trữ sản phẩm · Khách hàng · Người dùng · Hóa đơn
 
 6. 📁 CẤU TRÚC THƯ MỤC DỰ ÁN
 Dưới đây là cấu trúc source code chính của phiên bản dự án.
+**/
 📦 TranThiThaoNhu_2124110075
 │
 ├── 📄 TranThiThaoNhu_2124110075.sln
@@ -645,7 +646,7 @@ Dưới đây là cấu trúc source code chính của phiên bản dự án.
     ├── 📄 FormQuickReport.resx
     │
     └── 📄 Form1.cs
-
+/**
 
 6.1. Giải thích thư mục Backend
 Thư mục / File	Chức năng
