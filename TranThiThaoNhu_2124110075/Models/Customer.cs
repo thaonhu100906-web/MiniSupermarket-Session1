@@ -32,5 +32,8 @@ namespace TranThiThaoNhu_2124110075.API.Models
         [Required(ErrorMessage = "Hạng thành viên không được để trống!")]
         [StringLength(50)]
         public string MembershipRank { get; set; } = "Chuẩn";
+
+        // Thời điểm khách hàng đăng ký, dùng cho thống kê khách hàng mới.
+        public DateTime? CreatedAt { get; set; }
     }
 }

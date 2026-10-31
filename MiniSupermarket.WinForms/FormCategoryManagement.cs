@@ -1,5 +1,4 @@
-﻿
-// Họ tên: Trần Thị Thảo Như
+﻿// Họ tên: Trần Thị Thảo Như
 // MSSV: 2124110075
 // Lớp: CCQ2411C
 // Môn: lập trình ứng dụng
@@ -7,7 +6,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace MiniSupermarket.WinForms
@@ -24,6 +25,9 @@ namespace MiniSupermarket.WinForms
         private Button btnPagePrevious = null!;
         private Button btnPageNext = null!;
         private Label lblPageInfo = null!;
+        private Panel tablePanel = null!;
+        private Panel detailPanel = null!;
+
         private int currentPage = 1;
         private const int pageSize = 10;
         private int totalPages = 1;
@@ -33,15 +37,19 @@ namespace MiniSupermarket.WinForms
         private readonly Color BackgroundColor = Color.FromArgb(244, 246, 249);
         private readonly Color TextColor = Color.FromArgb(35, 42, 55);
 
-        // Màu xanh dương của cột đầu tiên giống trang Quản lý sản phẩm.
-        //private readonly Color FirstHeaderColor = Color.FromArgb(0, 120, 215);
-
         public FormCategoryManagement()
         {
             InitializeComponent();
             InitializeCustomLayout();
             DailyFreshTheme.Apply(this);
-            LoadCategoryData();
+
+            Load += FormCategoryManagement_Load;
+            Resize += FormCategoryManagement_Resize;
+        }
+
+        private async void FormCategoryManagement_Load(object? sender, EventArgs e)
+        {
+            await LoadCategoryDataAsync();
         }
 
         private void InitializeCustomLayout()
@@ -50,12 +58,13 @@ namespace MiniSupermarket.WinForms
             BackColor = BackgroundColor;
             FormBorderStyle = FormBorderStyle.None;
             Dock = DockStyle.Fill;
+            AutoScroll = true;
             MinimumSize = new Size(700, 450);
 
             Label lblTitle = new Label
             {
-                Text = "📁  QUẢN LÝ DANH MỤC",
-                Font = new Font("Segoe UI", 18F, FontStyle.Bold),
+                Text = "📁 QUẢN LÝ DANH MỤC",
+                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
                 ForeColor = TextColor,
                 AutoSize = true,
                 Location = new Point(20, 15)
@@ -67,36 +76,20 @@ namespace MiniSupermarket.WinForms
                 Font = new Font("Segoe UI", 9.5F),
                 ForeColor = Color.FromArgb(110, 118, 130),
                 AutoSize = true,
-                Location = new Point(23, 50)
+                Location = new Point(22, 45)
             };
 
             Controls.Add(lblTitle);
             Controls.Add(lblSubtitle);
 
-            TableLayoutPanel contentLayout = new TableLayoutPanel
+            // 1. Panel Bảng Dữ Liệu
+            tablePanel = new Panel
             {
                 Location = new Point(20, 85),
-                Size = new Size(ClientSize.Width - 40, ClientSize.Height - 105),
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom |
-                         AnchorStyles.Left | AnchorStyles.Right,
-                ColumnCount = 2,
-                RowCount = 1,
-                BackColor = BackgroundColor,
-                Padding = new Padding(0),
-                Margin = new Padding(0)
-            };
-
-            contentLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65F));
-            contentLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35F));
-            contentLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-
-            Panel tablePanel = new Panel
-            {
-                Dock = DockStyle.Fill,
                 BackColor = Color.White,
-                Padding = new Padding(12),
-                Margin = new Padding(0, 0, 10, 0)
+                BorderStyle = BorderStyle.FixedSingle
             };
+            Controls.Add(tablePanel);
 
             Label lblList = new Label
             {
@@ -104,14 +97,13 @@ namespace MiniSupermarket.WinForms
                 Font = new Font("Segoe UI", 11F, FontStyle.Bold),
                 ForeColor = TextColor,
                 Dock = DockStyle.Top,
-                Height = 35
+                Height = 35,
+                Padding = new Padding(8, 5, 0, 0)
             };
 
             dgvCategory = new DataGridView
             {
-                Dock = DockStyle.None,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
+                Location = new Point(8, 40),
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 ReadOnly = true,
@@ -119,131 +111,101 @@ namespace MiniSupermarket.WinForms
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 RowHeadersVisible = false,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
                 AutoGenerateColumns = true,
-                Font = new Font("Segoe UI", 9.5F),
-                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None
+                Font = new Font("Segoe UI", 9.5F)
             };
 
-            dgvCategory.EnableHeadersVisualStyles = false;
             dgvCategory.RowTemplate.Height = 35;
             dgvCategory.SelectionChanged += DgvCategory_SelectionChanged;
+            tablePanel.Controls.Add(dgvCategory);
 
+            // Thanh phân trang
             var paginationPanel = new Panel { Height = 42, BackColor = Color.White, Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom };
-            btnPagePrevious = new Button { Text = "← Trang trước", Width = 115, Height = 30, Left = 8, Top = 5, Enabled = false };
-            btnPageNext = new Button { Text = "Trang sau →", Width = 115, Height = 30, Top = 5, Anchor = AnchorStyles.Top | AnchorStyles.Right };
+            btnPagePrevious = CreateButton("← Trang trước", 8, 5, 110, 30, DailyFreshTheme.Sage);
+            btnPageNext = CreateButton("Trang sau →", 0, 5, 110, 30, DailyFreshTheme.Sage);
+            btnPagePrevious.Enabled = false;
+            btnPageNext.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+
             lblPageInfo = new Label { Text = "Trang 1/1", TextAlign = ContentAlignment.MiddleCenter, AutoSize = false, Height = 30, Top = 5 };
+
             btnPagePrevious.Click += async (sender, args) => { if (currentPage > 1) { currentPage--; await LoadCategoryDataAsync(); } };
             btnPageNext.Click += async (sender, args) => { if (currentPage < totalPages) { currentPage++; await LoadCategoryDataAsync(); } };
+
             paginationPanel.Controls.Add(lblPageInfo);
             paginationPanel.Controls.Add(btnPagePrevious);
             paginationPanel.Controls.Add(btnPageNext);
             paginationPanel.Resize += (sender, args) =>
             {
-                btnPageNext.Left = Math.Max(125, paginationPanel.ClientSize.Width - btnPageNext.Width - 8);
+                btnPageNext.Left = Math.Max(120, paginationPanel.ClientSize.Width - btnPageNext.Width - 8);
                 lblPageInfo.Left = btnPagePrevious.Right + 4;
                 lblPageInfo.Width = Math.Max(40, btnPageNext.Left - lblPageInfo.Left - 4);
                 lblPageInfo.BringToFront();
                 btnPagePrevious.BringToFront();
                 btnPageNext.BringToFront();
             };
-            tablePanel.Controls.Add(dgvCategory);
             tablePanel.Controls.Add(paginationPanel);
             tablePanel.Controls.Add(lblList);
 
-            void LayoutCategoryTable()
+            // 2. Panel Nhập Liệu Chi Tiết (Bên phải, chuẩn 2x2 nút bấm)
+            detailPanel = new Panel
             {
-                int innerWidth = Math.Max(100, tablePanel.ClientSize.Width - tablePanel.Padding.Horizontal);
-                int innerHeight = Math.Max(150, tablePanel.ClientSize.Height - tablePanel.Padding.Vertical);
-                lblList.Location = new Point(tablePanel.Padding.Left, tablePanel.Padding.Top);
-                lblList.Width = innerWidth;
-                paginationPanel.SetBounds(tablePanel.Padding.Left, tablePanel.ClientSize.Height - tablePanel.Padding.Bottom - paginationPanel.Height, innerWidth, paginationPanel.Height);
-                dgvCategory.SetBounds(tablePanel.Padding.Left, tablePanel.Padding.Top + lblList.Height, innerWidth, Math.Max(80, innerHeight - lblList.Height - paginationPanel.Height));
-                dgvCategory.BringToFront();
-                paginationPanel.BringToFront();
-                lblList.BringToFront();
-            }
-            tablePanel.Resize += (sender, args) => LayoutCategoryTable();
-            LayoutCategoryTable();
-
-            Panel detailPanel = new Panel
-            {
-                Dock = DockStyle.Fill,
+                Location = new Point(20, 410),
                 BackColor = Color.White,
-                Padding = new Padding(18),
-                Margin = new Padding(0)
+                BorderStyle = BorderStyle.FixedSingle
             };
+            Controls.Add(detailPanel);
 
             Label lblDetail = new Label
             {
                 Text = "Thông tin danh mục",
-                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11.5F, FontStyle.Bold),
                 ForeColor = TextColor,
-                Location = new Point(18, 18),
+                Location = new Point(18, 12),
                 AutoSize = true
             };
 
             Label lblName = new Label
             {
                 Text = "Tên danh mục",
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                ForeColor = TextColor,
-                Location = new Point(18, 65),
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(73, 80, 87),
+                Location = new Point(18, 48),
                 AutoSize = true
             };
 
             txtCategoryName = new TextBox
             {
-                Location = new Point(18, 90),
-                Width = 250,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Font = new Font("Segoe UI", 10F)
+                Location = new Point(18, 70),
+                Size = new Size(280, 27),
+                Font = new Font("Segoe UI", 10F),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             Label lblDesc = new Label
             {
                 Text = "Mô tả",
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                ForeColor = TextColor,
-                Location = new Point(18, 135),
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(73, 80, 87),
+                Location = new Point(18, 105),
                 AutoSize = true
             };
 
             txtDescription = new TextBox
             {
-                Location = new Point(18, 160),
-                Width = 250,
-                Height = 85,
+                Location = new Point(18, 127),
+                Size = new Size(280, 75),
                 Multiline = true,
                 ScrollBars = ScrollBars.Vertical,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Font = new Font("Segoe UI", 10F)
+                Font = new Font("Segoe UI", 10F),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
-            btnAdd = CreateActionButton("＋  Thêm mới", Color.FromArgb(40, 167, 69));
-            btnUpdate = CreateActionButton("✎  Cập nhật", Color.FromArgb(41, 100, 180));
-            btnDelete = CreateActionButton("✕  Xóa", Color.FromArgb(220, 53, 69));
-            btnRefresh = CreateActionButton("↻  Làm mới", Color.FromArgb(108, 117, 125));
-
-            btnAdd.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            btnUpdate.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            btnDelete.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            btnRefresh.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-
-            btnAdd.Location = new Point(18, 275);
-            btnUpdate.Location = new Point(18, 325);
-            btnDelete.Location = new Point(18, 375);
-            btnRefresh.Location = new Point(18, 425);
-
-            detailPanel.SizeChanged += (s, e) =>
-            {
-                int buttonWidth = Math.Max(100, detailPanel.ClientSize.Width - 36);
-                btnAdd.Width = buttonWidth;
-                btnUpdate.Width = buttonWidth;
-                btnDelete.Width = buttonWidth;
-                btnRefresh.Width = buttonWidth;
-                txtCategoryName.Width = buttonWidth;
-                txtDescription.Width = buttonWidth;
-            };
+            btnAdd = CreateButton("Thêm mới", 18, 220, 130, 36, Color.FromArgb(40, 167, 69));
+            btnUpdate = CreateButton("Cập nhật", 158, 220, 130, 36, Color.FromArgb(23, 162, 184));
+            btnDelete = CreateButton("Xóa", 18, 265, 130, 36, Color.FromArgb(220, 53, 69));
+            btnRefresh = CreateButton("Làm mới", 158, 265, 130, 36, Color.FromArgb(108, 117, 125));
 
             btnAdd.Click += BtnAdd_Click;
             btnUpdate.Click += BtnUpdate_Click;
@@ -260,45 +222,119 @@ namespace MiniSupermarket.WinForms
             detailPanel.Controls.Add(btnDelete);
             detailPanel.Controls.Add(btnRefresh);
 
-            contentLayout.Controls.Add(tablePanel, 0, 0);
-            contentLayout.Controls.Add(detailPanel, 1, 0);
-            Controls.Add(contentLayout);
+            FormCategoryManagement_Resize(this, EventArgs.Empty);
         }
 
-        private Button CreateActionButton(string text, Color color)
+        private void FormCategoryManagement_Resize(object? sender, EventArgs e)
+        {
+            if (tablePanel == null || detailPanel == null || btnPagePrevious == null || btnPageNext == null || lblPageInfo == null)
+                return;
+
+            int width = ClientSize.Width - 40;
+            int height = ClientSize.Height - 100;
+
+            if (width < 300 || height < 200)
+                return;
+
+            if (width >= 950)
+            {
+                int detailWidth = Math.Min(340, width / 3);
+                int gap = 15;
+                int tableWidth = width - detailWidth - gap;
+
+                tablePanel.Location = new Point(20, 85);
+                tablePanel.Size = new Size(tableWidth, Math.Max(300, height));
+
+                detailPanel.Location = new Point(20 + tableWidth + gap, 85);
+                detailPanel.Size = new Size(detailWidth, Math.Max(340, height));
+
+                AutoScrollMinSize = Size.Empty;
+                SetDetailControlWidths(detailWidth);
+            }
+            else
+            {
+                tablePanel.Location = new Point(20, 85);
+                tablePanel.Size = new Size(width, 300);
+
+                detailPanel.Location = new Point(20, 400);
+                detailPanel.Size = new Size(width, 335);
+
+                AutoScrollMinSize = new Size(0, 760);
+                SetDetailControlWidths(width);
+            }
+
+            var paginationPanel = tablePanel.Controls.OfType<Panel>().FirstOrDefault();
+            if (paginationPanel != null)
+            {
+                paginationPanel.SetBounds(8, tablePanel.ClientSize.Height - 46, tablePanel.ClientSize.Width - 16, 42);
+            }
+
+            dgvCategory.Width = tablePanel.ClientSize.Width - 16;
+            dgvCategory.Height = Math.Max(100, tablePanel.ClientSize.Height - 90);
+        }
+
+        private void SetDetailControlWidths(int panelWidth)
+        {
+            int inputWidth = Math.Max(150, panelWidth - 36);
+            txtCategoryName.Width = inputWidth;
+            txtDescription.Width = inputWidth;
+
+            int buttonWidth = Math.Max(100, (panelWidth - 46) / 2);
+            btnAdd.Width = buttonWidth;
+            btnUpdate.Width = buttonWidth;
+            btnDelete.Width = buttonWidth;
+            btnRefresh.Width = buttonWidth;
+
+            btnAdd.Location = new Point(18, 220);
+            btnUpdate.Location = new Point(28 + buttonWidth, 220);
+            btnDelete.Location = new Point(18, 265);
+            btnRefresh.Location = new Point(28 + buttonWidth, 265);
+        }
+
+        private Button CreateButton(string text, int x, int y, int width, int height, Color color)
         {
             Button button = new Button
             {
                 Text = text,
-                Size = new Size(145, 42),
+                Location = new Point(x, y),
+                Size = new Size(width, height),
                 BackColor = color,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                UseVisualStyleBackColor = false
             };
 
             button.FlatAppearance.BorderSize = 0;
             return button;
         }
 
-        private async void LoadCategoryData() => await LoadCategoryDataAsync();
-
-        private async System.Threading.Tasks.Task LoadCategoryDataAsync()
+        private async Task LoadCategoryDataAsync()
         {
             try
             {
                 loadingRows = true;
                 string jsonResult = await ApiClientService.GetDataWithTokenAsync(
                     $"categories/paged?pageNumber={currentPage}&pageSize={pageSize}");
+
                 var result = JsonSerializer.Deserialize<PagedListResponse<CategoryModel>>(jsonResult,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
                 var categories = result?.Items ?? new List<CategoryModel>();
                 totalCount = result?.TotalCount ?? categories.Count;
                 totalPages = Math.Max(1, result?.TotalPages ?? 1);
-                if (currentPage > totalPages) { currentPage = totalPages; loadingRows = false; await LoadCategoryDataAsync(); return; }
+
+                if (currentPage > totalPages)
+                {
+                    currentPage = totalPages;
+                    loadingRows = false;
+                    await LoadCategoryDataAsync();
+                    return;
+                }
+
                 dgvCategory.DataSource = categories;
-                lblPageInfo.Text = $"Trang {currentPage}/{totalPages} • Tổng {totalCount} danh mục";
+                lblPageInfo.Text = $"Trang {currentPage}/{totalPages}  •  Tổng {totalCount} danh mục";
                 btnPagePrevious.Enabled = currentPage > 1;
                 btnPageNext.Enabled = currentPage < totalPages;
 
@@ -311,21 +347,9 @@ namespace MiniSupermarket.WinForms
                 if (dgvCategory.Columns["Description"] != null)
                     dgvCategory.Columns["Description"]!.HeaderText = "Mô tả";
 
-                // Giữ màu xanh lá cho toàn bộ tiêu đề theo DailyFreshTheme.
-                dgvCategory.ColumnHeadersDefaultCellStyle.BackColor =
-                    DailyFreshTheme.Sage;
-                dgvCategory.ColumnHeadersDefaultCellStyle.ForeColor =
-                    Color.White;
-
-                //// Chỉ đổi cột đầu tiên sang xanh dương như trang Quản lý sản phẩm.
-                //if (dgvCategory.Columns["CategoryId"] != null)
-                //{
-                //    dgvCategory.Columns["CategoryId"]!.HeaderCell.Style.BackColor =
-                //        FirstHeaderColor;
-
-                //    dgvCategory.Columns["CategoryId"]!.HeaderCell.Style.ForeColor =
-                //        Color.White;
-                //}
+                // Đã xóa bỏ đoạn gán ép màu thủ công để hệ thống tự nhận diện theo chuẩn theme chung
+                dgvCategory.DefaultCellStyle.SelectionBackColor = Color.FromArgb(210, 235, 245);
+                dgvCategory.DefaultCellStyle.SelectionForeColor = Color.Black;
 
                 dgvCategory.Refresh();
             }
@@ -348,10 +372,10 @@ namespace MiniSupermarket.WinForms
             var row = dgvCategory.SelectedRows[0];
 
             txtCategoryName.Text =
-                row.Cells["CategoryName"].Value?.ToString() ?? string.Empty;
+                row.Cells["CategoryName"]?.Value?.ToString() ?? string.Empty;
 
             txtDescription.Text =
-                row.Cells["Description"].Value?.ToString() ?? string.Empty;
+                row.Cells["Description"]?.Value?.ToString() ?? string.Empty;
         }
 
         private async void BtnAdd_Click(object? sender, EventArgs e)
@@ -374,33 +398,33 @@ namespace MiniSupermarket.WinForms
 
             try
             {
-                bool success = await ApiClientService.PostDataWithTokenAsync(
+                var result = await ApiClientService.PostDataWithTokenMessageAsync(
                     "categories", newCat);
 
-                if (success)
+                if (result.Success)
                 {
                     MessageBox.Show(
-                        "Thêm danh mục thành công!",
+                        result.Message,
                         "Thông báo",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
 
                     ClearInputs();
                     currentPage = 1;
-                    LoadCategoryData();
+                    await LoadCategoryDataAsync();
                 }
                 else
                 {
                     MessageBox.Show(
-                        "Thêm danh mục thất bại!",
-                        "Lỗi",
+                        result.Message,
+                        "Thông báo",
                         MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
+                        MessageBoxIcon.Warning);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi khi thêm danh mục: " + ex.Message);
+                MessageBox.Show("Lỗi khi thêm danh mục: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -418,12 +442,12 @@ namespace MiniSupermarket.WinForms
 
             if (string.IsNullOrWhiteSpace(txtCategoryName.Text))
             {
-                MessageBox.Show("Vui lòng nhập tên danh mục!");
+                MessageBox.Show("Vui lòng nhập tên danh mục!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            var catId =
-                dgvCategory.SelectedRows[0].Cells["CategoryId"].Value;
+            var catId = dgvCategory.SelectedRows[0].Cells["CategoryId"]?.Value;
+            if (catId == null) return;
 
             var updatedCat = new
             {
@@ -444,7 +468,7 @@ namespace MiniSupermarket.WinForms
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
 
-                    LoadCategoryData();
+                    await LoadCategoryDataAsync();
                 }
                 else
                 {
@@ -457,7 +481,7 @@ namespace MiniSupermarket.WinForms
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi khi cập nhật danh mục: " + ex.Message);
+                MessageBox.Show("Lỗi khi cập nhật danh mục: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -473,8 +497,8 @@ namespace MiniSupermarket.WinForms
                 return;
             }
 
-            var catId =
-                dgvCategory.SelectedRows[0].Cells["CategoryId"].Value;
+            var catId = dgvCategory.SelectedRows[0].Cells["CategoryId"]?.Value;
+            if (catId == null) return;
 
             DialogResult confirm = MessageBox.Show(
                 "Bạn có chắc chắn muốn xóa danh mục này?",
@@ -500,7 +524,7 @@ namespace MiniSupermarket.WinForms
 
                     ClearInputs();
                     currentPage = 1;
-                    LoadCategoryData();
+                    await LoadCategoryDataAsync();
                 }
                 else
                 {
@@ -521,21 +545,18 @@ namespace MiniSupermarket.WinForms
             }
         }
 
-        private void BtnRefresh_Click(object? sender, EventArgs e)
+        private async void BtnRefresh_Click(object? sender, EventArgs e)
         {
             ClearInputs();
             currentPage = 1;
-            LoadCategoryData();
+            await LoadCategoryDataAsync();
         }
 
         private void ClearInputs()
         {
             txtCategoryName.Clear();
             txtDescription.Clear();
-        }
-
-        private void FormCategoryManagement_Load(object sender, EventArgs e)
-        {
+            dgvCategory.ClearSelection();
         }
     }
 

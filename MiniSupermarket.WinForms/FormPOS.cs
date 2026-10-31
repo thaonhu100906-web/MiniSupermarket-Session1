@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.VisualBasic;
 
 namespace MiniSupermarket.WinForms
 {
@@ -43,6 +44,20 @@ namespace MiniSupermarket.WinForms
         private Label lblTotal = null!;
         private Label lblItemCount = null!;
         private Button btnPay = null!;
+        private TextBox txtCashReceived = null!;
+        private Label lblChange = null!;
+        private TextBox txtCustomerPhone = null!;
+        private TextBox txtRedeemPoints = null!;
+        private Label lblCustomerInfo = null!;
+        private Label lblCustomerPoints = null!;
+        private Button btnLookupCustomer = null!;
+        private int? selectedCustomerId;
+        private int availableRewardPoints;
+
+        private TableLayoutPanel root = null!;
+        private TableLayoutPanel content = null!;
+        private Panel productPanel = null!;
+        private Panel cartPanel = null!;
 
         public FormPOS()
         {
@@ -51,6 +66,7 @@ namespace MiniSupermarket.WinForms
             BuildLayout();
             DailyFreshTheme.Apply(this);
             Load += FormPOS_Load;
+            Resize += FormPOS_Resize; // Bắt sự kiện thu nhỏ/phóng to để rớt dòng
         }
 
         private async void FormPOS_Load(object? sender, EventArgs e)
@@ -63,10 +79,10 @@ namespace MiniSupermarket.WinForms
             Text = "Bán hàng POS";
             BackColor = Color.FromArgb(245, 247, 250);
             Font = new Font("Segoe UI", 10);
-            Dock = DockStyle.Fill;
+            AutoScroll = true; // Cho phép cuộn trang khi thu nhỏ
             Padding = new Padding(12);
 
-            var root = new TableLayoutPanel
+            root = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
@@ -95,7 +111,7 @@ namespace MiniSupermarket.WinForms
             });
             root.Controls.Add(header, 0, 0);
 
-            var content = new TableLayoutPanel
+            content = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
@@ -106,7 +122,8 @@ namespace MiniSupermarket.WinForms
             content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52));
             root.Controls.Add(content, 0, 1);
 
-            var productPanel = new Panel
+            // 1. Panel Sản phẩm (Bên trái khi mở rộng)
+            productPanel = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
@@ -166,7 +183,8 @@ namespace MiniSupermarket.WinForms
             btnAdd.Click += BtnAdd_Click;
             productArea.Controls.Add(btnAdd, 0, 1);
 
-            var cartPanel = new Panel
+            // 2. Panel Giỏ hàng & Thanh toán (Bên phải khi mở rộng, rớt xuống dưới khi thu nhỏ)
+            cartPanel = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.White,
@@ -179,14 +197,18 @@ namespace MiniSupermarket.WinForms
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 6
+                RowCount = 8
             };
+
             cartLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
             cartLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
             cartLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             cartLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 55));
+            cartLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
+            cartLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 60));
             cartLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
             cartLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 43));
+
             cartPanel.Controls.Add(cartLayout);
 
             cartLayout.Controls.Add(new Label
@@ -242,6 +264,120 @@ namespace MiniSupermarket.WinForms
             };
             summary.Controls.Add(lblItemCount, 0, 1);
 
+            var customerPanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 3,
+                Margin = new Padding(0, 2, 0, 2)
+            };
+            customerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+            customerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 27));
+            customerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 27));
+
+            var customerSearchRow = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1
+            };
+            customerSearchRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 72));
+            customerSearchRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 28));
+            txtCustomerPhone = new TextBox
+            {
+                Dock = DockStyle.Fill,
+                PlaceholderText = "SĐT khách hàng (không bắt buộc)"
+            };
+            txtCustomerPhone.TextChanged += (s, e) =>
+            {
+                selectedCustomerId = null;
+                availableRewardPoints = 0;
+                lblCustomerInfo.Text = "Khách hàng: Chưa tra cứu";
+                lblCustomerPoints.Text = "Điểm có thể đổi: 0";
+                txtRedeemPoints.Text = "0";
+                CalculateChange();
+            };
+            btnLookupCustomer = MakeButton("Tra cứu", Color.FromArgb(13, 110, 253));
+            btnLookupCustomer.Dock = DockStyle.Fill;
+            btnLookupCustomer.Click += BtnLookupCustomer_Click;
+            customerSearchRow.Controls.Add(txtCustomerPhone, 0, 0);
+            customerSearchRow.Controls.Add(btnLookupCustomer, 1, 0);
+            customerPanel.Controls.Add(customerSearchRow, 0, 0);
+
+            lblCustomerInfo = new Label
+            {
+                Text = "Khách hàng: Chưa tra cứu",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = Color.FromArgb(45, 65, 75)
+            };
+            customerPanel.Controls.Add(lblCustomerInfo, 0, 1);
+
+            var redeemRow = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1 };
+            redeemRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65));
+            redeemRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35));
+            lblCustomerPoints = new Label
+            {
+                Text = "Điểm có thể đổi: 0",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = Color.DarkGreen
+            };
+            txtRedeemPoints = new TextBox { Dock = DockStyle.Fill, Text = "0" };
+            txtRedeemPoints.TextChanged += (s, e) => CalculateChange();
+            redeemRow.Controls.Add(lblCustomerPoints, 0, 0);
+            redeemRow.Controls.Add(txtRedeemPoints, 1, 0);
+            customerPanel.Controls.Add(redeemRow, 0, 2);
+            cartLayout.Controls.Add(customerPanel, 0, 4);
+
+            var paymentPanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 2
+            };
+
+            paymentPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            paymentPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+
+            paymentPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+            paymentPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+
+            paymentPanel.Controls.Add(new Label
+            {
+                Text = "Tiền khách đưa:",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
+            }, 0, 0);
+
+            txtCashReceived = new TextBox
+            {
+                Dock = DockStyle.Fill,
+                Text = "0"
+            };
+            txtCashReceived.TextChanged += (s, e) => CalculateChange();
+
+            paymentPanel.Controls.Add(txtCashReceived, 1, 0);
+
+            paymentPanel.Controls.Add(new Label
+            {
+                Text = "Tiền thối lại:",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
+            }, 0, 1);
+
+            lblChange = new Label
+            {
+                Text = "0 đ",
+                Dock = DockStyle.Fill,
+                ForeColor = Color.DarkGreen,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold)
+            };
+
+            paymentPanel.Controls.Add(lblChange, 1, 1);
+
+            cartLayout.Controls.Add(paymentPanel, 0, 5);
+
             var actions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -265,7 +401,7 @@ namespace MiniSupermarket.WinForms
             {
                 btnIncrease, btnDecrease, btnRemove
             });
-            cartLayout.Controls.Add(actions, 0, 4);
+            cartLayout.Controls.Add(actions, 0, 6);
 
             var bottom = new TableLayoutPanel
             {
@@ -290,7 +426,86 @@ namespace MiniSupermarket.WinForms
 
             bottom.Controls.Add(btnClear, 0, 0);
             bottom.Controls.Add(btnPay, 1, 0);
-            cartLayout.Controls.Add(bottom, 0, 5);
+            cartLayout.Controls.Add(bottom, 0, 7);
+        }
+
+        private void FormPOS_Resize(object? sender, EventArgs e)
+        {
+            if (content == null || productPanel == null || cartPanel == null)
+                return;
+
+            int clientWidth = ClientSize.Width;
+
+            // Ngưỡng 1100px: Màn hình rộng -> Chia 2 cột ngang. Màn hình nhỏ -> Rớt xuống thành 2 hàng dọc
+            if (clientWidth >= 1100)
+            {
+                if (content.ColumnCount != 2)
+                {
+                    content.RowCount = 1;
+                    content.ColumnCount = 2;
+                    content.ColumnStyles.Clear();
+                    content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48F));
+                    content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52F));
+                    content.RowStyles.Clear();
+                    content.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+                    content.Controls.Add(productPanel, 0, 0);
+                    content.Controls.Add(cartPanel, 1, 0);
+
+                    productPanel.Margin = new Padding(0, 0, 6, 0);
+                    cartPanel.Margin = new Padding(6, 0, 0, 0);
+                }
+                root.Dock = DockStyle.Fill;
+            }
+            else
+            {
+                if (content.ColumnCount != 1)
+                {
+                    content.RowCount = 2;
+                    content.ColumnCount = 1;
+                    content.ColumnStyles.Clear();
+                    content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+                    content.RowStyles.Clear();
+                    content.RowStyles.Add(new RowStyle(SizeType.Absolute, 500F)); // Chiều cao cố định cho bảng sản phẩm
+                    content.RowStyles.Add(new RowStyle(SizeType.Absolute, 580F)); // Chiều cao cố định cho bảng giỏ hàng & thanh toán
+
+                    content.Controls.Add(productPanel, 0, 0);
+                    content.Controls.Add(cartPanel, 0, 1);
+
+                    productPanel.Margin = new Padding(0, 0, 0, 10);
+                    cartPanel.Margin = new Padding(0, 0, 0, 0);
+                }
+                root.Dock = DockStyle.Top;
+                root.Height = 66 + 500 + 580 + 40; // Tăng chiều cao để hiện thanh cuộn dọc mượt mà
+            }
+        }
+
+        private void CalculateChange()
+        {
+            if (txtCashReceived == null || lblChange == null)
+                return;
+
+            decimal total = cart.Sum(x => x.Subtotal);
+            int points = 0;
+            if (int.TryParse(txtRedeemPoints?.Text.Trim(), out int parsedPoints) && parsedPoints >= 0
+                && selectedCustomerId.HasValue && parsedPoints <= availableRewardPoints
+                && parsedPoints * 1000m <= total)
+                points = parsedPoints;
+            decimal payable = total - points * 1000m;
+            if (!decimal.TryParse(
+                txtCashReceived.Text.Trim(),
+                System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.CurrentCulture,
+                out decimal cash))
+            {
+                lblChange.Text = "Số tiền không hợp lệ";
+                return;
+            }
+
+            decimal difference = cash - payable;
+            lblChange.Text = difference >= 0
+                ? difference.ToString("N0") + " đ"
+                : "Còn thiếu " + Math.Abs(difference).ToString("N0") + " đ";
         }
 
         private static DataGridView CreateGrid()
@@ -309,8 +524,7 @@ namespace MiniSupermarket.WinForms
                 RowHeadersVisible = false,
                 EnableHeadersVisualStyles = false,
                 ColumnHeadersHeight = 34,
-                AutoGenerateColumns = false
-            ,
+                AutoGenerateColumns = false,
                 ColumnHeadersDefaultCellStyle =
                 {
                     BackColor = Color.FromArgb(35, 75, 95),
@@ -436,6 +650,7 @@ namespace MiniSupermarket.WinForms
 
             lblTotal.Text = cart.Sum(x => x.Subtotal).ToString("N0") + " đ";
             lblItemCount.Text = "Số lượng: " + cart.Sum(x => x.Quantity);
+            CalculateChange();
         }
 
         private void AddProductToCart(ProductItem? product)
@@ -539,6 +754,78 @@ namespace MiniSupermarket.WinForms
             RefreshCart();
         }
 
+        private sealed class CustomerLookupResult
+        {
+            public int CustomerId { get; set; }
+            public string CustomerName { get; set; } = "";
+            public string PhoneNumber { get; set; } = "";
+            public int RewardPoints { get; set; }
+            public string MembershipRank { get; set; } = "";
+        }
+
+        private async void BtnLookupCustomer_Click(object? sender, EventArgs e)
+        {
+            string phone = txtCustomerPhone.Text.Trim();
+            if (string.IsNullOrWhiteSpace(phone))
+            {
+                MessageBox.Show("Vui lòng nhập số điện thoại khách hàng.", "Tra cứu khách hàng",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                txtCustomerPhone.Focus();
+                return;
+            }
+
+            btnLookupCustomer.Enabled = false;
+            try
+            {
+                string url = "customers/lookup?phone=" + Uri.EscapeDataString(phone);
+                using var lookupResponse = await ApiClientService.Client.GetAsync(url);
+                if (!lookupResponse.IsSuccessStatusCode)
+                {
+                    selectedCustomerId = null;
+                    availableRewardPoints = 0;
+                    lblCustomerInfo.Text = "Khách hàng: Không tìm thấy";
+                    lblCustomerPoints.Text = "Điểm có thể đổi: 0";
+                    string apiMessage = "Không tìm thấy khách hàng theo số điện thoại này.";
+                    string body = await lookupResponse.Content.ReadAsStringAsync();
+                    try
+                    {
+                        using var errorDoc = System.Text.Json.JsonDocument.Parse(body);
+                        if (errorDoc.RootElement.TryGetProperty("message", out var message))
+                            apiMessage = message.GetString() ?? apiMessage;
+                    }
+                    catch { }
+                    MessageBox.Show(apiMessage, "Tra cứu khách hàng", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    CalculateChange();
+                    return;
+                }
+
+                var customer = await lookupResponse.Content.ReadFromJsonAsync<CustomerLookupResult>();
+                if (customer == null)
+                    throw new InvalidOperationException("API không trả về thông tin khách hàng hợp lệ.");
+
+                selectedCustomerId = customer.CustomerId;
+                availableRewardPoints = customer.RewardPoints;
+                lblCustomerInfo.Text = $"Khách hàng: {customer.CustomerName} ({customer.MembershipRank})";
+                lblCustomerPoints.Text = $"Điểm có thể đổi: {availableRewardPoints}";
+                txtRedeemPoints.Text = "0";
+                CalculateChange();
+            }
+            catch (System.Net.Http.HttpRequestException)
+            {
+                MessageBox.Show("Không thể tra cứu khách hàng. Vui lòng kiểm tra API và kết nối mạng.",
+                    "Lỗi kết nối", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Tra cứu khách hàng thất bại: " + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnLookupCustomer.Enabled = true;
+            }
+        }
+
         private async void BtnPay_Click(object? sender, EventArgs e)
         {
             if (cart.Count == 0)
@@ -548,9 +835,64 @@ namespace MiniSupermarket.WinForms
             }
 
             decimal total = cart.Sum(x => x.Subtotal);
+            string customerPhone = txtCustomerPhone.Text.Trim();
+            int redeemPoints = 0;
+            if (!int.TryParse(txtRedeemPoints.Text.Trim(), out redeemPoints) || redeemPoints < 0)
+            {
+                MessageBox.Show("Số điểm muốn đổi phải là số nguyên không âm.", "Dữ liệu không hợp lệ",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtRedeemPoints.Focus();
+                return;
+            }
+            if (redeemPoints > 0 && !selectedCustomerId.HasValue)
+            {
+                MessageBox.Show("Vui lòng tra cứu số điện thoại và xác nhận khách hàng trước khi đổi điểm.",
+                    "Chưa chọn khách hàng", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtCustomerPhone.Focus();
+                return;
+            }
+            if (redeemPoints > availableRewardPoints)
+            {
+                MessageBox.Show($"Khách hàng chỉ có {availableRewardPoints} điểm. Vui lòng nhập số điểm không vượt quá số điểm hiện có.",
+                    "Không đủ điểm", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtRedeemPoints.Focus();
+                return;
+            }
+            if (redeemPoints * 1000m > total)
+            {
+                MessageBox.Show("Số điểm đổi vượt quá tổng tiền hóa đơn.", "Không thể đổi điểm",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtRedeemPoints.Focus();
+                return;
+            }
+            decimal discount = redeemPoints * 1000m;
+            decimal finalAmount = total - discount;
+
+            if (!decimal.TryParse(
+                txtCashReceived.Text.Trim(),
+                System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.CurrentCulture,
+                out decimal cashReceived) || cashReceived < 0)
+            {
+                MessageBox.Show("Tiền khách đưa không hợp lệ. Vui lòng nhập số tiền không âm.",
+                    "Dữ liệu không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtCashReceived.Focus();
+                return;
+            }
+
+            if (cashReceived < finalAmount)
+            {
+                MessageBox.Show($"Khách còn thiếu {finalAmount - cashReceived:N0} đ.",
+                    "Chưa đủ tiền thanh toán", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtCashReceived.Focus();
+                return;
+            }
+
+            decimal change = cashReceived - finalAmount;
+            lblChange.Text = change.ToString("N0") + " đ";
 
             if (MessageBox.Show(
-                $"Tổng thanh toán: {total:N0} đ\n\nXác nhận thanh toán và lưu hóa đơn?",
+                $"Tổng tiền: {total:N0} đ\nGiảm từ điểm thưởng: {discount:N0} đ\nCần thanh toán: {finalAmount:N0} đ\n\nXác nhận thanh toán và lưu hóa đơn?",
                 "Xác nhận thanh toán",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question) != DialogResult.Yes)
@@ -563,6 +905,9 @@ namespace MiniSupermarket.WinForms
                 var request = new
                 {
                     CashierUsername = SessionManager.CurrentUsername,
+                    CustomerPhone = string.IsNullOrWhiteSpace(customerPhone) ? null : customerPhone,
+                    RedeemPoints = redeemPoints,
+                    CashReceived = cashReceived,
                     Items = cart.Select(x => new
                     {
                         x.ProductId,
@@ -576,10 +921,18 @@ namespace MiniSupermarket.WinForms
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    string error = await response.Content.ReadAsStringAsync();
+                    string errorBody = await response.Content.ReadAsStringAsync();
+                    string errorMessage = errorBody;
+                    try
+                    {
+                        using var errorJson = System.Text.Json.JsonDocument.Parse(errorBody);
+                        if (errorJson.RootElement.TryGetProperty("message", out var messageElement))
+                            errorMessage = messageElement.GetString() ?? errorBody;
+                    }
+                    catch { }
 
                     MessageBox.Show(
-                        "Thanh toán thất bại. Hóa đơn chưa được lưu.\n" + error,
+                        "Thanh toán thất bại. Hóa đơn chưa được lưu.\n" + errorMessage,
                         "Lỗi",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
@@ -590,13 +943,30 @@ namespace MiniSupermarket.WinForms
 
                 cart.Clear();
                 RefreshCart();
+                txtCashReceived.Text = "0";
+                txtCustomerPhone.Clear();
+                txtRedeemPoints.Text = "0";
+                selectedCustomerId = null;
+                availableRewardPoints = 0;
                 await LoadProductsAsync();
 
-                MessageBox.Show(
-                    "Thanh toán thành công! Hóa đơn đã được lưu vào SQL Server.\n" + result,
-                    "Thành công",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                string successMessage = "Thanh toán thành công! Hóa đơn đã được lưu vào SQL Server.";
+                try
+                {
+                    using var resultJson = System.Text.Json.JsonDocument.Parse(result);
+                    var data = resultJson.RootElement;
+                    if (data.TryGetProperty("orderId", out var orderId))
+                        successMessage += $"\nMã hóa đơn: {orderId}";
+                    if (data.TryGetProperty("totalAmount", out var amount))
+                        successMessage += $"\nThực thu: {amount.GetDecimal():N0} đ";
+                    if (data.TryGetProperty("changeAmount", out var changeAmount))
+                        successMessage += $"\nTiền thối: {changeAmount.GetDecimal():N0} đ";
+                    if (data.TryGetProperty("redeemedPoints", out var redeemed))
+                        successMessage += $"\nĐiểm đã đổi: {redeemed}";
+                }
+                catch { }
+
+                MessageBox.Show(successMessage, "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {

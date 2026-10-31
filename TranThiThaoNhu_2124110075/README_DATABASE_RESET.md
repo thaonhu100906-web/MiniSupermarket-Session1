@@ -7,6 +7,13 @@ Yêu cầu: SQL Server Express đang chạy; `appsettings.json` trỏ đúng `lo
 3. Mở Tools → NuGet Package Manager → Package Manager Console. Chọn Default project là `TranThiThaoNhu_2124110075.API`.
 4. Để xóa database cũ hoàn toàn: chạy `Drop-Database` và nhập `Y` xác nhận. Thao tác này xóa toàn bộ dữ liệu của database.
 5. Chạy `Update-Database`. Chỉ cần chạy lệnh này một lần; không cần tạo migration mới.
-6. Nhấn F5 chạy API. API sẽ tự chạy migration, tạo dữ liệu seed và tạo/cập nhật hai stored procedure từ thư mục `Scripts`.
+6. Chạy `Update-Database`: migration `20261030160000_AddRevenueByDayStoredProcedure` sẽ tự tạo `dbo.GetRevenueByDay` sau khi bảng `Orders` được tạo.
+7. Nhấn F5 chạy API. API sẽ tự chạy migration, tạo dữ liệu seed và tạo/cập nhật các stored procedure từ thư mục `Scripts`.
+
+Các stored procedure phục vụ báo cáo:
+- `dbo.GetShiftRevenue`: tổng số hóa đơn và doanh thu trong khoảng/ca.
+- `dbo.GetRevenueByDay`: nhóm doanh thu theo ngày bằng `GROUP BY CAST(OrderDate AS DATE)` để phục vụ biểu đồ tiêu chí 45.
+
+Không cần tạo bảng mới cho tiêu chí 45. Stored Procedure được quản lý bằng EF Core Migration nên sẽ được tạo lại khi xóa database và chạy `Update-Database`.
 
 Migration `FixSeedUserPasswordHashes` đã được sửa để không cập nhật bảng `Users` trước khi bảng `Employees` được đổi tên. Migration đổi tên bảng sẽ cập nhật password hash sau khi đổi tên.

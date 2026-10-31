@@ -1,4 +1,4 @@
-
+﻿
 // Họ tên: Trần Thị Thảo Như
 // MSSV: 2124110075
 // Lớp: CCQ2411C
@@ -169,7 +169,7 @@ namespace TranThiThaoNhu_2124110075.API.Controllers
                     message = "Giỏ hàng đang trống!"
                 });
             }
-
+            //================================================================================================47
             await using var transaction =
                 await _context.Database.BeginTransactionAsync();
 
@@ -220,6 +220,46 @@ namespace TranThiThaoNhu_2124110075.API.Controllers
                     product.StockQuantity -= item.Quantity;
                 }
 
+                // Tiêu chí 47: đổi điểm và lưu hóa đơn trong cùng transaction.
+                if (request.RedeemPoints > 0)
+                {
+                    if (string.IsNullOrWhiteSpace(request.CustomerPhone))
+                    {
+                        await transaction.RollbackAsync();
+                        return BadRequest(new { message = "Vui lòng nhập số điện thoại khách hàng để đổi điểm." });
+                    }
+
+                    var customer = await _context.Customers.FirstOrDefaultAsync(c => c.PhoneNumber == request.CustomerPhone.Trim());
+                    if (customer == null)
+                    {
+                        await transaction.RollbackAsync();
+                        return BadRequest(new { message = "Không tìm thấy khách hàng theo số điện thoại đã nhập." });
+                    }
+                    if (customer.RewardPoints < request.RedeemPoints)
+                    {
+                        await transaction.RollbackAsync();
+                        return BadRequest(new { message = $"Khách hàng chỉ có {customer.RewardPoints} điểm, không đủ để đổi." });
+                    }
+
+                    decimal discount = request.RedeemPoints * 1000m;
+                    if (discount > order.TotalAmount)
+                    {
+                        await transaction.RollbackAsync();
+                        return BadRequest(new { message = "Số điểm đổi vượt quá tổng tiền hóa đơn." });
+                    }
+                    customer.RewardPoints -= request.RedeemPoints;
+                    order.TotalAmount -= discount;
+                }
+
+                if (request.CashReceived < order.TotalAmount)
+                {
+                    await transaction.RollbackAsync();
+                    return BadRequest(new
+                    {
+                        message = $"Tiền khách đưa chưa đủ. Khách còn thiếu {order.TotalAmount - request.CashReceived:N0} đ."
+                    });
+                }
+
                 _context.Orders.Add(order);
 
                 await _context.SaveChangesAsync();
@@ -230,7 +270,11 @@ namespace TranThiThaoNhu_2124110075.API.Controllers
                     message = "Thanh toán thành công!",
                     orderId = order.OrderId,
                     orderDate = order.OrderDate,
-                    totalAmount = order.TotalAmount
+                    totalAmount = order.TotalAmount,
+                    cashReceived = request.CashReceived,
+                    changeAmount = request.CashReceived - order.TotalAmount,
+                    redeemedPoints = request.RedeemPoints,
+                    discountAmount = request.RedeemPoints * 1000m
                 });
             }
             catch

@@ -1,4 +1,4 @@
-
+﻿
  // Họ tên: Trần Thị Thảo Như
 // MSSV: 2124110075
 // Lớp: CCQ2411C
@@ -59,6 +59,33 @@ namespace TranThiThaoNhu_2124110075.API.Controllers
             });
         }
 
+        // Tra cứu nhanh khách hàng theo số điện thoại tại màn hình POS.
+        [HttpGet("lookup")]
+        [Authorize(Roles = "Admin,Cashier")]
+        public async Task<IActionResult> LookupByPhone([FromQuery] string phone)
+        {
+            if (string.IsNullOrWhiteSpace(phone))
+                return BadRequest(new { message = "Vui lòng nhập số điện thoại khách hàng." });
+
+            string normalizedPhone = phone.Trim();
+            var customer = await _context.Customers.AsNoTracking()
+                .Where(c => c.PhoneNumber == normalizedPhone)
+                .Select(c => new
+                {
+                    c.CustomerId,
+                    c.CustomerName,
+                    c.PhoneNumber,
+                    c.RewardPoints,
+                    c.MembershipRank
+                })
+                .FirstOrDefaultAsync();
+
+            if (customer == null)
+                return NotFound(new { message = "Không tìm thấy khách hàng theo số điện thoại này." });
+
+            return Ok(customer);
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -108,7 +135,8 @@ namespace TranThiThaoNhu_2124110075.API.Controllers
                 RewardPoints = request.RewardPoints,
                 MembershipRank = string.IsNullOrWhiteSpace(request.MembershipRank)
                     ? "Chuẩn"
-                    : request.MembershipRank.Trim()
+                    : request.MembershipRank.Trim(),
+                CreatedAt = DateTime.Now
             };
 
             _context.Customers.Add(customer);

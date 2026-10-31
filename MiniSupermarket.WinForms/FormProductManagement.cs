@@ -141,6 +141,7 @@ namespace MiniSupermarket.WinForms
                 Color.FromArgb(210, 235, 245);
             dgvProduct.DefaultCellStyle.SelectionForeColor = Color.Black;
             dgvProduct.SelectionChanged += DgvProduct_SelectionChanged;
+            dgvProduct.CellFormatting += DgvProduct_CellFormatting;
             tablePanel.Padding = new Padding(8);
             tablePanel.Controls.Add(dgvProduct);
 
@@ -398,6 +399,21 @@ namespace MiniSupermarket.WinForms
             finally
             {
                 isLoading = false;
+            }
+        }
+
+
+        // Tiêu chí 43: cảnh báo tồn kho thấp trực tiếp trên lưới.
+        private void DgvProduct_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0 ||
+                dgvProduct.Columns[e.ColumnIndex].Name != "StockQuantity") return;
+            if (int.TryParse(Convert.ToString(e.Value), out int stock) && stock <= 10)
+            {
+                e.CellStyle.BackColor = Color.LightCoral;
+                e.CellStyle.ForeColor = Color.DarkRed;
+                e.CellStyle.SelectionBackColor = Color.IndianRed;
+                e.CellStyle.SelectionForeColor = Color.White;
             }
         }
 

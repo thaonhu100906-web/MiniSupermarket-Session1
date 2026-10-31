@@ -16,11 +16,12 @@ namespace MiniSupermarket.WinForms
 {
     public static class ApiClientService
     {
+        //============================================================================40: Dùng chung HttpClient
         private static readonly HttpClient _client = new HttpClient
         {
             BaseAddress = new Uri("http://localhost:5138/api/")
         };
-
+        
         public static HttpClient Client
         {
             get
@@ -29,7 +30,7 @@ namespace MiniSupermarket.WinForms
                 return _client;
             }
         }
-
+        //============================================================================38
         private static void SetAuthorization()
         {
             _client.DefaultRequestHeaders.Authorization = null;
@@ -57,10 +58,9 @@ namespace MiniSupermarket.WinForms
             var jsonString = await response.Content.ReadAsStringAsync();
 
             using var doc = JsonDocument.Parse(jsonString);
-
+            //========================================================================38
             SessionManager.JwtToken =
                 doc.RootElement.GetProperty("token").GetString() ?? string.Empty;
-
             SessionManager.CurrentRole =
                 doc.RootElement.GetProperty("role").GetString() ?? string.Empty;
 
@@ -71,6 +71,7 @@ namespace MiniSupermarket.WinForms
 
         public static async Task<string> GetDataWithTokenAsync(string endpoint)
         {
+            //==================================================================================40
             SetAuthorization();
 
             var response = await _client.GetAsync(endpoint);
@@ -109,5 +110,37 @@ namespace MiniSupermarket.WinForms
             var response = await _client.DeleteAsync(endpoint);
             return response.IsSuccessStatusCode;
         }
+
+        public static async Task<(bool Success, string Message)> PostDataWithTokenMessageAsync<T>(
+            string endpoint, T data)
+        {
+            SetAuthorization();
+
+            var response = await _client.PostAsJsonAsync(endpoint, data);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return (true, "Thêm danh mục thành công!");
+            }
+
+            string responseBody = await response.Content.ReadAsStringAsync();
+
+            try
+            {
+                using var document = System.Text.Json.JsonDocument.Parse(responseBody);
+
+                if (document.RootElement.TryGetProperty("message", out var message))
+                {
+                    return (false, message.GetString() ?? "Thao tác thất bại!");
+                }
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                // Phản hồi không phải JSON hợp lệ.
+            }
+
+            return (false, "Thao tác thất bại!");
+        }
+
     }
 }

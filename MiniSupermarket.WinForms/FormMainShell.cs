@@ -1,5 +1,4 @@
-﻿
-// Họ tên: Trần Thị Thảo Như
+﻿// Họ tên: Trần Thị Thảo Như
 // MSSV: 2124110075
 // Lớp: CCQ2411C
 // Môn: lập trình ứng dụng
@@ -85,6 +84,16 @@ namespace MiniSupermarket.WinForms
                 AutoScroll = false
             };
 
+            // === BỔ SUNG: Tự động co giãn form con khi panelMainContent thay đổi kích thước ===
+            panelMainContent.Resize += (sender, e) =>
+            {
+                if (_activeForm != null && !_activeForm.IsDisposed)
+                {
+                    _activeForm.Size = panelMainContent.ClientSize;
+                }
+            };
+            // ==============================================================================
+
             Controls.Add(panelMainContent);
             Controls.Add(panelTopHeader);
             Controls.Add(panelSidebar);
@@ -110,7 +119,7 @@ namespace MiniSupermarket.WinForms
 
             Label lblMenu = new Label
             {
-                Text = "  MENU CHỨC NĂNG",
+                Text = "   MENU CHỨC NĂNG",
                 ForeColor = TextGray,
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 Dock = DockStyle.Top,
@@ -119,12 +128,12 @@ namespace MiniSupermarket.WinForms
                 Padding = new Padding(18, 0, 0, 0)
             };
 
-            btnPOS = CreateMenuButton("🛒  Bán hàng (POS)");
-            btnCategory = CreateMenuButton("📁  Quản lý Danh mục");
-            btnProduct = CreateMenuButton("📦  Quản lý Sản phẩm");
-            btnCustomer = CreateMenuButton("👥  Quản lý Khách hàng");
-            btnAccount = CreateMenuButton("🛡  Quản trị Tài khoản");
-            btnReports = CreateMenuButton("📊  Báo cáo Doanh thu");
+            btnPOS = CreateMenuButton("🛒   Bán hàng (POS)");
+            btnCategory = CreateMenuButton("📁   Quản lý Danh mục");
+            btnProduct = CreateMenuButton("📦   Quản lý Sản phẩm");
+            btnCustomer = CreateMenuButton("👥   Quản lý Khách hàng");
+            btnAccount = CreateMenuButton("🛡   Quản trị Tài khoản");
+            btnReports = CreateMenuButton("📊   Báo cáo Doanh thu");
 
             btnPOS.Click += btnPOS_Click;
             btnCategory.Click += btnCategory_Click;
@@ -153,7 +162,7 @@ namespace MiniSupermarket.WinForms
 
             btnLogout = new Button
             {
-                Text = "🚪  Đăng xuất",
+                Text = "🚪   Đăng xuất",
                 Dock = DockStyle.Fill,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = SidebarColor,
@@ -192,7 +201,6 @@ namespace MiniSupermarket.WinForms
             button.FlatAppearance.BorderSize = 0;
             button.FlatAppearance.MouseOverBackColor = SidebarHoverColor;
 
-            // Chỉ đổi màu khi rê chuột vào, không ghi đè mục đang được chọn.
             button.MouseEnter += (sender, e) =>
             {
                 if (button != _selectedMenuButton)
@@ -299,7 +307,7 @@ namespace MiniSupermarket.WinForms
             string role = SessionManager.CurrentRole ?? "";
             string username = SessionManager.CurrentUsername ?? "";
 
-            lblUserInfo.Text = $"👤  {username}  |  Vai trò: {role}";
+            lblUserInfo.Text = $"👤   {username}   |   Vai trò: {role}";
 
             ApplyRolePermissions(role);
 
@@ -331,7 +339,6 @@ namespace MiniSupermarket.WinForms
 
                 case "CASHIER":
                     btnPOS.Visible = true;
-                    btnCustomer.Visible = true;
                     break;
 
                 case "WAREHOUSE":
@@ -367,11 +374,7 @@ namespace MiniSupermarket.WinForms
                     break;
 
                 case "CASHIER":
-                    OpenChildForm(
-                        new FormCustomerManagement(),
-                        "QUẢN LÝ KHÁCH HÀNG & TÍCH ĐIỂM",
-                        btnCustomer
-                    );
+                    OpenChildForm(new FormPOS(), "BÁN HÀNG POS", btnPOS);
                     break;
 
                 case "WAREHOUSE":
@@ -402,7 +405,6 @@ namespace MiniSupermarket.WinForms
                 _activeForm = null;
             }
 
-            // Trả các nút khác về màu mặc định.
             foreach (Control control in panelSidebar.Controls)
             {
                 if (control is Button button && button != btnLogout)
@@ -412,7 +414,6 @@ namespace MiniSupermarket.WinForms
                 }
             }
 
-            // Chỉ đánh dấu nút đang được chọn.
             _selectedMenuButton = activeButton;
             activeButton.BackColor = SidebarSelectedColor;
             activeButton.ForeColor = Color.White;

@@ -1,5 +1,4 @@
-﻿
-// Họ tên: Trần Thị Thảo Như
+﻿// Họ tên: Trần Thị Thảo Như
 // MSSV: 2124110075
 // Lớp: CCQ2411C
 // Môn: lập trình ứng dụng
@@ -8,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace MiniSupermarket.WinForms
@@ -19,31 +19,43 @@ namespace MiniSupermarket.WinForms
         private TextBox txtPassword = null!;
         private TextBox txtFullName = null!;
         private ComboBox cmbRole = null!;
+        private TextBox txtSearch = null!;
         private Button btnAdd = null!;
         private Button btnUpdate = null!;
         private Button btnDelete = null!;
         private Button btnRefresh = null!;
+        private Button btnSearch = null!;
+        private Button btnPrevious = null!;
+        private Button btnNext = null!;
+        private Label lblPagination = null!;
         private Panel tablePanel = null!;
         private Panel detailPanel = null!;
-        private Button btnPagePrevious = null!;
-        private Button btnPageNext = null!;
-        private Label lblPageInfo = null!;
-        private int currentPage = 1;
-        private const int pageSize = 10;
-        private int totalPages = 1;
-        private int totalCount = 0;
-        private bool loadingRows = false;
 
-        private readonly Color backgroundColor = Color.FromArgb(250, 248, 239);
-        private readonly Color primaryColor = Color.FromArgb(103, 155, 112);
-        private readonly Color textColor = Color.FromArgb(54, 75, 58);
+        private bool isLoading;
+        private int currentPage = 1;
+        private int pageSize = 10;
+        private int totalPages = 1;
+        private int totalCount;
+        private string currentKeyword = string.Empty;
+
+        private readonly JsonSerializerOptions jsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         public FormAccountManagement()
         {
             InitializeComponent();
             InitializeCustomLayout();
             DailyFreshTheme.Apply(this);
-            LoadUserData();
+
+            Load += FormAccountManagement_Load;
+            Resize += FormAccountManagement_Resize;
+        }
+
+        private async void FormAccountManagement_Load(object? sender, EventArgs e)
+        {
+            await LoadUserData();
         }
 
         private void InitializeCustomLayout()
@@ -51,52 +63,52 @@ namespace MiniSupermarket.WinForms
             Text = "Quản trị tài khoản";
             FormBorderStyle = FormBorderStyle.None;
             Dock = DockStyle.Fill;
-            BackColor = backgroundColor;
+            BackColor = Color.FromArgb(244, 246, 248);
             AutoScroll = true;
-            MinimumSize = new Size(650, 450);
 
-            var title = new Label
+            Controls.Add(new Label
             {
                 Text = "QUẢN TRỊ TÀI KHOẢN",
-                Font = new Font("Segoe UI", 18, FontStyle.Bold),
-                ForeColor = textColor,
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                ForeColor = Color.FromArgb(33, 37, 41),
                 Location = new Point(20, 15),
                 AutoSize = true
-            };
+            });
 
-            var subtitle = new Label
+            Controls.Add(new Label
             {
-                Text = "Quản lý tài khoản, thông tin và vai trò tài khoản",
-                Font = new Font("Segoe UI", 9.5F),
+                Text = "Quản lý tài khoản, thông tin và phân quyền hệ thống",
+                Font = new Font("Segoe UI", 9.5f),
                 ForeColor = Color.FromArgb(108, 117, 125),
-                Location = new Point(22, 52),
+                Location = new Point(22, 45),
                 AutoSize = true
+            });
+
+            txtSearch = new TextBox
+            {
+                Location = new Point(20, 75),
+                Size = new Size(240, 28),
+                Font = new Font("Segoe UI", 9.5f),
+                PlaceholderText = "Nhập tên hoặc tài khoản..."
             };
+            Controls.Add(txtSearch);
 
-            Controls.Add(title);
-            Controls.Add(subtitle);
+            btnSearch = CreateButton("Tìm kiếm", 268, 73, 95, 30, Color.FromArgb(52, 120, 180));
+            btnSearch.Click += BtnSearch_Click;
+            Controls.Add(btnSearch);
 
+            // 1. Panel Bảng Dữ Liệu
             tablePanel = new Panel
             {
+                Location = new Point(20, 112),
                 BackColor = Color.White,
-                Padding = new Padding(10),
                 BorderStyle = BorderStyle.FixedSingle
             };
-
-            var lblList = new Label
-            {
-                Text = "Danh sách tài khoản",
-                Dock = DockStyle.Top,
-                Height = 35,
-                Font = new Font("Segoe UI", 11, FontStyle.Bold),
-                ForeColor = textColor
-            };
+            Controls.Add(tablePanel);
 
             dgvAccounts = new DataGridView
             {
-                Dock = DockStyle.None,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.None,
+                Location = new Point(8, 8),
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 ReadOnly = true,
@@ -104,191 +116,164 @@ namespace MiniSupermarket.WinForms
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 RowHeadersVisible = false,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None,
                 AutoGenerateColumns = true,
-                EnableHeadersVisualStyles = false,
-                RowTemplate = { Height = 32 },
-                Font = new Font("Segoe UI", 9)
+                EnableHeadersVisualStyles = false
             };
 
-            dgvAccounts.ColumnHeadersDefaultCellStyle.BackColor = primaryColor;
+            dgvAccounts.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(35, 75, 95);
             dgvAccounts.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvAccounts.ColumnHeadersDefaultCellStyle.Font =
-                new Font("Segoe UI", 9, FontStyle.Bold);
-            dgvAccounts.DefaultCellStyle.SelectionBackColor =
-                Color.FromArgb(210, 235, 245);
+            dgvAccounts.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            dgvAccounts.ColumnHeadersHeight = 36;
+            dgvAccounts.RowTemplate.Height = 30;
+            dgvAccounts.DefaultCellStyle.Font = new Font("Segoe UI", 9f);
+            dgvAccounts.DefaultCellStyle.SelectionBackColor = Color.FromArgb(210, 235, 245);
             dgvAccounts.DefaultCellStyle.SelectionForeColor = Color.Black;
             dgvAccounts.SelectionChanged += DgvAccounts_SelectionChanged;
 
-            var paginationPanel = new Panel { Height = 40, BackColor = Color.White, Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom };
-            btnPagePrevious = new Button { Text = "← Trang trước", Width = 115, Height = 30, Left = 8, Top = 5, Enabled = false };
-            btnPageNext = new Button { Text = "Trang sau →", Width = 115, Height = 30, Top = 5, Anchor = AnchorStyles.Top | AnchorStyles.Right };
-            lblPageInfo = new Label { Text = "Trang 1/1", TextAlign = ContentAlignment.MiddleCenter, AutoSize = false, Height = 30, Top = 5 };
-            btnPagePrevious.Click += async (sender, args) => { if (currentPage > 1) { currentPage--; await LoadUserDataAsync(); } };
-            btnPageNext.Click += async (sender, args) => { if (currentPage < totalPages) { currentPage++; await LoadUserDataAsync(); } };
-            paginationPanel.Controls.Add(lblPageInfo);
-            paginationPanel.Controls.Add(btnPagePrevious);
-            paginationPanel.Controls.Add(btnPageNext);
-            paginationPanel.Resize += (sender, args) =>
-            {
-                btnPageNext.Left = Math.Max(125, paginationPanel.ClientSize.Width - btnPageNext.Width - 8);
-                lblPageInfo.Left = btnPagePrevious.Right + 4;
-                lblPageInfo.Width = Math.Max(40, btnPageNext.Left - lblPageInfo.Left - 4);
-                lblPageInfo.BringToFront();
-                btnPagePrevious.BringToFront();
-                btnPageNext.BringToFront();
-            };
             tablePanel.Controls.Add(dgvAccounts);
-            tablePanel.Controls.Add(paginationPanel);
-            tablePanel.Controls.Add(lblList);
 
-            void LayoutAccountTable()
+            // Thanh phân trang
+            btnPrevious = CreateButton("← Trang trước", 8, 0, 110, 30, Color.FromArgb(52, 120, 180));
+            btnPrevious.Click += BtnPrevious_Click;
+            tablePanel.Controls.Add(btnPrevious);
+
+            lblPagination = new Label
             {
-                int innerWidth = Math.Max(100, tablePanel.ClientSize.Width - tablePanel.Padding.Horizontal);
-                int innerHeight = Math.Max(150, tablePanel.ClientSize.Height - tablePanel.Padding.Vertical);
-                lblList.Location = new Point(tablePanel.Padding.Left, tablePanel.Padding.Top);
-                lblList.Width = innerWidth;
-                paginationPanel.SetBounds(tablePanel.Padding.Left, tablePanel.ClientSize.Height - tablePanel.Padding.Bottom - paginationPanel.Height, innerWidth, paginationPanel.Height);
-                dgvAccounts.SetBounds(tablePanel.Padding.Left, tablePanel.Padding.Top + lblList.Height, innerWidth, Math.Max(80, innerHeight - lblList.Height - paginationPanel.Height));
-                dgvAccounts.BringToFront();
-                paginationPanel.BringToFront();
-                lblList.BringToFront();
-            }
-            tablePanel.Resize += (sender, args) => LayoutAccountTable();
-            LayoutAccountTable();
-            Controls.Add(tablePanel);
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(73, 80, 87),
+                Height = 30
+            };
+            tablePanel.Controls.Add(lblPagination);
 
+            btnNext = CreateButton("Trang sau →", 0, 0, 110, 30, Color.FromArgb(52, 120, 180));
+            btnNext.Click += BtnNext_Click;
+            tablePanel.Controls.Add(btnNext);
+
+            // 2. Panel Nhập Liệu Chi Tiết (Giống form Khách hàng)
             detailPanel = new Panel
             {
+                Location = new Point(20, 470),
                 BackColor = Color.White,
-                Padding = new Padding(16),
                 BorderStyle = BorderStyle.FixedSingle
             };
             Controls.Add(detailPanel);
 
-            var detailTitle = new Label
+            detailPanel.Controls.Add(new Label
             {
                 Text = "Thông tin tài khoản",
-                Font = new Font("Segoe UI", 12, FontStyle.Bold),
-                ForeColor = textColor,
-                Location = new Point(16, 15),
+                Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(33, 37, 41),
+                Location = new Point(18, 12),
                 AutoSize = true
-            };
-            detailPanel.Controls.Add(detailTitle);
+            });
 
-            CreateLabel(detailPanel, "Tài khoản", 16, 52);
-            txtUsername = CreateTextBox(detailPanel, 16, 74);
+            CreateLabel(detailPanel, "Tài khoản", 18, 48);
+            txtUsername = CreateTextBox(detailPanel, 18, 70);
 
-            CreateLabel(detailPanel, "Mật khẩu (khi thêm mới)", 16, 108);
-            txtPassword = CreateTextBox(detailPanel, 16, 130);
+            CreateLabel(detailPanel, "Mật khẩu (thêm mới)", 18, 105);
+            txtPassword = CreateTextBox(detailPanel, 18, 127);
             txtPassword.UseSystemPasswordChar = true;
 
-            CreateLabel(detailPanel, "Họ tên", 16, 164);
-            txtFullName = CreateTextBox(detailPanel, 16, 186);
+            CreateLabel(detailPanel, "Họ tên", 18, 162);
+            txtFullName = CreateTextBox(detailPanel, 18, 184);
 
-            CreateLabel(detailPanel, "Vai trò", 16, 220);
+            CreateLabel(detailPanel, "Vai trò hệ thống", 18, 219);
             cmbRole = new ComboBox
             {
-                Location = new Point(16, 242),
-                Height = 30,
-                DropDownStyle = ComboBoxStyle.DropDownList,
+                Location = new Point(18, 241),
+                Size = new Size(280, 28),
                 Font = new Font("Segoe UI", 10),
+                DropDownStyle = ComboBoxStyle.DropDownList,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
-
-            cmbRole.Items.AddRange(new object[]
-            {
-                "Admin",
-                "Warehouse",
-                "Cashier"
-            });
+            cmbRole.Items.AddRange(new object[] { "Admin", "Warehouse", "Cashier" });
+            cmbRole.SelectedIndex = 2;
             detailPanel.Controls.Add(cmbRole);
 
-            btnAdd = CreateButton("Thêm mới", Color.FromArgb(40, 167, 69));
-            btnUpdate = CreateButton("Cập nhật", Color.FromArgb(41, 100, 180));
-            btnDelete = CreateButton("Xóa", Color.FromArgb(220, 53, 69));
-            btnRefresh = CreateButton("Làm mới", Color.FromArgb(108, 117, 125));
-
+            btnAdd = CreateButton("Thêm mới", 18, 285, 130, 36, Color.FromArgb(40, 167, 69));
             btnAdd.Click += BtnAdd_Click;
-            btnUpdate.Click += BtnUpdate_Click;
-            btnDelete.Click += BtnDelete_Click;
-            btnRefresh.Click += BtnRefresh_Click;
-
             detailPanel.Controls.Add(btnAdd);
+
+            btnUpdate = CreateButton("Cập nhật", 158, 285, 130, 36, Color.FromArgb(23, 162, 184));
+            btnUpdate.Click += BtnUpdate_Click;
             detailPanel.Controls.Add(btnUpdate);
+
+            btnDelete = CreateButton("Xóa", 18, 330, 130, 36, Color.FromArgb(220, 53, 69));
+            btnDelete.Click += BtnDelete_Click;
             detailPanel.Controls.Add(btnDelete);
+
+            btnRefresh = CreateButton("Làm mới", 158, 330, 130, 36, Color.FromArgb(108, 117, 125));
+            btnRefresh.Click += BtnRefresh_Click;
             detailPanel.Controls.Add(btnRefresh);
 
-            Resize += FormAccountManagement_Resize;
             FormAccountManagement_Resize(this, EventArgs.Empty);
         }
 
         private void FormAccountManagement_Resize(object? sender, EventArgs e)
         {
-            if (tablePanel == null || detailPanel == null)
+            if (tablePanel == null || detailPanel == null || btnPrevious == null || btnNext == null || lblPagination == null)
                 return;
 
             int width = ClientSize.Width - 40;
-            int height = ClientSize.Height - 95;
+            int height = ClientSize.Height - 125;
 
-            if (width <= 0 || height <= 0)
+            if (width < 300 || height < 200)
                 return;
 
-            int gap = 12;
-
-            if (width >= 850)
+            if (width >= 950)
             {
-                int detailWidth = Math.Min(330, (int)(width * 0.32));
+                int detailWidth = Math.Min(340, width / 3);
+                int gap = 15;
                 int tableWidth = width - detailWidth - gap;
 
-                tablePanel.Location = new Point(20, 85);
-                tablePanel.Size = new Size(tableWidth, height);
-
-                detailPanel.Location = new Point(
-                    20 + tableWidth + gap, 85);
-                detailPanel.Size = new Size(detailWidth, height);
-
+                tablePanel.Location = new Point(20, 112);
+                tablePanel.Size = new Size(tableWidth, Math.Max(250, height));
+                detailPanel.Location = new Point(20 + tableWidth + gap, 112);
+                detailPanel.Size = new Size(detailWidth, Math.Max(390, height));
                 AutoScrollMinSize = Size.Empty;
+                SetDetailControlWidths(detailWidth);
             }
             else
             {
-                int panelWidth = Math.Max(300, width);
-
-                tablePanel.Location = new Point(20, 85);
-                tablePanel.Size = new Size(panelWidth, 300);
-
-                detailPanel.Location = new Point(20, 397);
-                detailPanel.Size = new Size(panelWidth, 350);
-
-                AutoScrollMinSize = new Size(0, 765);
+                tablePanel.Location = new Point(20, 112);
+                tablePanel.Size = new Size(width, 280);
+                detailPanel.Location = new Point(20, 405);
+                detailPanel.Size = new Size(width, 390);
+                AutoScrollMinSize = new Size(0, 810);
+                SetDetailControlWidths(width);
             }
 
-            LayoutDetailControls();
+            btnPrevious.Location = new Point(8, tablePanel.Height - 38);
+            btnNext.Location = new Point(tablePanel.Width - 118, tablePanel.Height - 38);
+            lblPagination.Location = new Point(122, tablePanel.Height - 38);
+            lblPagination.Width = Math.Max(50, tablePanel.Width - 244);
+
+            dgvAccounts.Width = tablePanel.ClientSize.Width - 16;
+            dgvAccounts.Height = Math.Max(100, tablePanel.ClientSize.Height - 50);
         }
 
-        private void LayoutDetailControls()
+        private void SetDetailControlWidths(int panelWidth)
         {
-            int inputWidth = Math.Max(180, detailPanel.ClientSize.Width - 48);
+            int inputWidth = Math.Max(150, panelWidth - 36);
             txtUsername.Width = inputWidth;
             txtPassword.Width = inputWidth;
             txtFullName.Width = inputWidth;
             cmbRole.Width = inputWidth;
 
-            int buttonWidth = Math.Max(
-                100, (detailPanel.ClientSize.Width - 44) / 2);
+            int buttonWidth = Math.Max(100, (panelWidth - 46) / 2);
+            btnAdd.Width = buttonWidth;
+            btnUpdate.Width = buttonWidth;
+            btnDelete.Width = buttonWidth;
+            btnRefresh.Width = buttonWidth;
 
-            int buttonY = 286;
-
-            btnAdd.Location = new Point(16, buttonY);
-            btnAdd.Size = new Size(buttonWidth, 34);
-
-            btnUpdate.Location = new Point(24 + buttonWidth, buttonY);
-            btnUpdate.Size = new Size(buttonWidth, 34);
-
-            btnDelete.Location = new Point(16, buttonY + 42);
-            btnDelete.Size = new Size(buttonWidth, 34);
-
-            btnRefresh.Location = new Point(24 + buttonWidth, buttonY + 42);
-            btnRefresh.Size = new Size(buttonWidth, 34);
+            btnAdd.Location = new Point(18, 285);
+            btnUpdate.Location = new Point(28 + buttonWidth, 285);
+            btnDelete.Location = new Point(18, 330);
+            btnRefresh.Location = new Point(28 + buttonWidth, 330);
         }
 
         private Label CreateLabel(Control parent, string text, int x, int y)
@@ -298,10 +283,9 @@ namespace MiniSupermarket.WinForms
                 Text = text,
                 Location = new Point(x, y),
                 AutoSize = true,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(73, 80, 87)
             };
-
             parent.Controls.Add(label);
             return label;
         }
@@ -311,67 +295,96 @@ namespace MiniSupermarket.WinForms
             var textBox = new TextBox
             {
                 Location = new Point(x, y),
-                Size = new Size(250, 27),
+                Size = new Size(280, 27),
                 Font = new Font("Segoe UI", 10),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left |
-                         AnchorStyles.Right
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
-
             parent.Controls.Add(textBox);
             return textBox;
         }
 
-        private Button CreateButton(string text, Color color)
+        private Button CreateButton(string text, int x, int y, int width, int height, Color color)
         {
-            var button = new Button
+            var btn = new Button
             {
                 Text = text,
+                Location = new Point(x, y),
+                Size = new Size(width, height),
                 BackColor = color,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                Cursor = Cursors.Hand,
-                UseVisualStyleBackColor = false
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
             };
-
-            button.FlatAppearance.BorderSize = 0;
-            return button;
+            btn.FlatAppearance.BorderSize = 0;
+            return btn;
         }
 
-        private async void LoadUserData() => await LoadUserDataAsync();
-
-        private async System.Threading.Tasks.Task LoadUserDataAsync()
+        private async Task LoadUserData()
         {
             try
             {
-                loadingRows = true;
-                string jsonResult = await ApiClientService.GetDataWithTokenAsync(
-                    $"users/paged?pageNumber={currentPage}&pageSize={pageSize}");
-                var result = JsonSerializer.Deserialize<PagedListResponse<UserModel>>(jsonResult,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                isLoading = true;
+
+                string url = $"users/paged?pageNumber={currentPage}&pageSize={pageSize}" +
+                             (string.IsNullOrWhiteSpace(currentKeyword) ? string.Empty : "&keyword=" + Uri.EscapeDataString(currentKeyword));
+
+                string jsonResult = await ApiClientService.GetDataWithTokenAsync(url);
+                var result = JsonSerializer.Deserialize<PagedListResponse<UserModel>>(jsonResult, jsonOptions);
+
                 var users = result?.Items ?? new List<UserModel>();
                 totalCount = result?.TotalCount ?? users.Count;
                 totalPages = Math.Max(1, result?.TotalPages ?? 1);
-                if (currentPage > totalPages) { currentPage = totalPages; loadingRows = false; await LoadUserDataAsync(); return; }
-                dgvAccounts.DataSource = users;
-                lblPageInfo.Text = $"Trang {currentPage}/{totalPages} • Tổng {totalCount} tài khoản";
-                btnPagePrevious.Enabled = currentPage > 1;
-                btnPageNext.Enabled = currentPage < totalPages;
 
-                SetColumnHeader("UserId", "Mã tài khoản");
-                SetColumnHeader("Username", "Tài khoản");
-                SetColumnHeader("FullName", "Họ tên");
-                SetColumnHeader("Role", "Vai trò");
+                if (currentPage > totalPages)
+                {
+                    currentPage = totalPages;
+                    isLoading = false;
+                    await LoadUserData();
+                    return;
+                }
+
+                dgvAccounts.DataSource = users;
+                ConfigureUserColumns();
+                UpdatePaginationControls();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    "Không thể tải danh sách tài khoản: " + ex.Message,
-                    "Lỗi",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                MessageBox.Show("Không thể tải danh sách tài khoản: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            finally { loadingRows = false; }
+            finally
+            {
+                isLoading = false;
+            }
+        }
+
+        private void ConfigureUserColumns()
+        {
+            SetColumnHeader("UserId", "Mã tài khoản");
+            SetColumnHeader("Username", "Tài khoản");
+            SetColumnHeader("FullName", "Họ tên");
+            SetColumnHeader("Role", "Vai trò");
+        }
+
+        private void UpdatePaginationControls()
+        {
+            lblPagination.Text = $"Trang {currentPage}/{totalPages}  •  Tổng {totalCount} TK";
+            btnPrevious.Enabled = currentPage > 1;
+            btnNext.Enabled = currentPage < totalPages;
+        }
+
+        private async void BtnPrevious_Click(object? sender, EventArgs e)
+        {
+            if (currentPage <= 1) return;
+            currentPage--;
+            await LoadUserData();
+        }
+
+        private async void BtnNext_Click(object? sender, EventArgs e)
+        {
+            if (currentPage >= totalPages) return;
+            currentPage++;
+            await LoadUserData();
         }
 
         private void SetColumnHeader(string columnName, string headerText)
@@ -382,19 +395,20 @@ namespace MiniSupermarket.WinForms
 
         private void DgvAccounts_SelectionChanged(object? sender, EventArgs e)
         {
-            if (loadingRows || dgvAccounts.SelectedRows.Count == 0)
+            if (isLoading || dgvAccounts.SelectedRows.Count == 0)
                 return;
 
             var row = dgvAccounts.SelectedRows[0];
 
-            txtUsername.Text =
-                row.Cells["Username"].Value?.ToString() ?? string.Empty;
+            txtUsername.Text = row.Cells["Username"]?.Value?.ToString() ?? string.Empty;
+            txtFullName.Text = row.Cells["FullName"]?.Value?.ToString() ?? string.Empty;
 
-            txtFullName.Text =
-                row.Cells["FullName"].Value?.ToString() ?? string.Empty;
-
-            string role = row.Cells["Role"].Value?.ToString() ?? "Cashier";
+            string role = row.Cells["Role"]?.Value?.ToString() ?? "Cashier";
             cmbRole.SelectedItem = role;
+
+            if (cmbRole.SelectedIndex < 0 && cmbRole.Items.Count > 0)
+                cmbRole.SelectedIndex = 0;
+
             txtPassword.Clear();
         }
 
@@ -404,15 +418,13 @@ namespace MiniSupermarket.WinForms
                 string.IsNullOrWhiteSpace(txtPassword.Text) ||
                 string.IsNullOrWhiteSpace(txtFullName.Text))
             {
-                MessageBox.Show("Vui lòng nhập đầy đủ thông tin tài khoản!",
-                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng nhập đầy đủ thông tin tài khoản!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (cmbRole.SelectedIndex < 0)
             {
-                MessageBox.Show("Vui lòng chọn vai trò!",
-                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng chọn vai trò!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -426,26 +438,23 @@ namespace MiniSupermarket.WinForms
 
             try
             {
-                bool success = await ApiClientService.PostDataWithTokenAsync(
-                    "users", newUser);
+                bool success = await ApiClientService.PostDataWithTokenAsync("users", newUser);
 
                 if (success)
                 {
-                    MessageBox.Show("Thêm tài khoản thành công!",
-                        "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Thêm tài khoản thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     ClearInputs();
                     currentPage = 1;
-                    LoadUserData();
+                    await LoadUserData();
                 }
                 else
                 {
-                    MessageBox.Show("Thêm tài khoản thất bại. Kiểm tra thông tin nhập!",
-                        "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Thêm tài khoản thất bại. Kiểm tra thông tin nhập!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi khi thêm tài khoản: " + ex.Message);
+                MessageBox.Show("Lỗi khi thêm tài khoản: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -453,7 +462,7 @@ namespace MiniSupermarket.WinForms
         {
             if (dgvAccounts.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Vui lòng chọn tài khoản cần cập nhật!");
+                MessageBox.Show("Vui lòng chọn tài khoản cần cập nhật!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -461,13 +470,12 @@ namespace MiniSupermarket.WinForms
                 string.IsNullOrWhiteSpace(txtFullName.Text) ||
                 cmbRole.SelectedIndex < 0)
             {
-                MessageBox.Show("Vui lòng nhập tài khoản, họ tên và vai trò!");
+                MessageBox.Show("Vui lòng nhập tài khoản, họ tên và vai trò!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            object? id = dgvAccounts.SelectedRows[0].Cells["UserId"].Value;
-            if (id == null)
-                return;
+            object? id = dgvAccounts.SelectedRows[0].Cells["UserId"]?.Value;
+            if (id == null) return;
 
             var updatedUser = new
             {
@@ -478,23 +486,21 @@ namespace MiniSupermarket.WinForms
 
             try
             {
-                bool success = await ApiClientService.PutDataWithTokenAsync(
-                    $"users/{id}", updatedUser);
+                bool success = await ApiClientService.PutDataWithTokenAsync($"users/{id}", updatedUser);
 
                 if (success)
                 {
-                    MessageBox.Show("Cập nhật tài khoản thành công!");
-                    currentPage = 1;
-                    LoadUserData();
+                    MessageBox.Show("Cập nhật tài khoản thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    await LoadUserData();
                 }
                 else
                 {
-                    MessageBox.Show("Cập nhật tài khoản thất bại. Vui lòng kiểm tra lại!");
+                    MessageBox.Show("Cập nhật tài khoản thất bại. Vui lòng kiểm tra lại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi khi cập nhật tài khoản: " + ex.Message);
+                MessageBox.Show("Lỗi khi cập nhật tài khoản: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -502,51 +508,52 @@ namespace MiniSupermarket.WinForms
         {
             if (dgvAccounts.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Vui lòng chọn tài khoản cần xóa!");
+                MessageBox.Show("Vui lòng chọn tài khoản cần xóa!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            object? id = dgvAccounts.SelectedRows[0].Cells["UserId"].Value;
-            if (id == null)
-                return;
+            object? id = dgvAccounts.SelectedRows[0].Cells["UserId"]?.Value;
+            if (id == null) return;
 
-            DialogResult result = MessageBox.Show(
-                "Bạn có chắc chắn muốn xóa tài khoản này?",
-                "Xác nhận xóa",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning);
-
-            if (result != DialogResult.Yes)
-                return;
+            var result = MessageBox.Show("Bạn có chắc chắn muốn xóa tài khoản này?", "Xác nhận xóa", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (result != DialogResult.Yes) return;
 
             try
             {
-                bool success = await ApiClientService.DeleteDataWithTokenAsync(
-                    $"users/{id}");
+                bool success = await ApiClientService.DeleteDataWithTokenAsync($"users/{id}");
 
                 if (success)
                 {
-                    MessageBox.Show("Xóa tài khoản thành công!");
+                    MessageBox.Show("Xóa tài khoản thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     ClearInputs();
                     currentPage = 1;
-                    LoadUserData();
+                    await LoadUserData();
                 }
                 else
                 {
-                    MessageBox.Show("Xóa tài khoản thất bại. Vui lòng kiểm tra lại!");
+                    MessageBox.Show("Xóa tài khoản thất bại. Vui lòng kiểm tra lại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi khi xóa tài khoản: " + ex.Message);
+                MessageBox.Show("Lỗi khi xóa tài khoản: " + ex.Message, "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void BtnRefresh_Click(object? sender, EventArgs e)
+        private async void BtnSearch_Click(object? sender, EventArgs e)
         {
+            currentKeyword = txtSearch.Text.Trim();
+            currentPage = 1;
+            await LoadUserData();
+        }
+
+        private async void BtnRefresh_Click(object? sender, EventArgs e)
+        {
+            txtSearch.Clear();
+            currentKeyword = string.Empty;
             ClearInputs();
             currentPage = 1;
-            LoadUserData();
+            await LoadUserData();
         }
 
         private void ClearInputs()
@@ -554,12 +561,8 @@ namespace MiniSupermarket.WinForms
             txtUsername.Clear();
             txtPassword.Clear();
             txtFullName.Clear();
-            cmbRole.SelectedIndex = -1;
+            cmbRole.SelectedIndex = 2;
             dgvAccounts.ClearSelection();
-        }
-
-        private void FormAccountManagement_Load(object sender, EventArgs e)
-        {
         }
     }
 

@@ -37,7 +37,7 @@
             ClientSize = new Size(800, 450);
             Name = "FormQuickReport";
             Text = "FormQuickReport";
-            Load += FormQuickReport_Load;
+            Load += FormQuickReport_Load_1;
             ResumeLayout(false);
         }
 
